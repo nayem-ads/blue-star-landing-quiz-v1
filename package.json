@@ -1,0 +1,21 @@
+{
+  "name": "bluestar-quiz-lp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Blue Star Adjusters paid landing page: Quiz First funnel with lead storage and email alerts.",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node scripts/smoke-test.js"
+  },
+  "dependencies": {
+    "compression": "^1.7.5",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Free Insurance Claim Review | Blue Star Adjusters</title>
+<meta name="description" content="Insurance offer too low after a fire, smoke or water loss? Answer 4 quick questions and a licensed public adjuster reviews your claim for free. CA DOI License 2B60428.">
+<meta name="robots" content="{{ROBOTS}}">
+<meta name="theme-color" content="#081D5E">
+<meta name="format-detection" content="telephone=no">
+<meta property="og:title" content="Free insurance claim review | Blue Star Adjusters">
+<meta property="og:description" content="A licensed public adjuster reviews your claim and calls you back. No upfront cost.">
+<meta property="og:type" content="website">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/sg-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/mont-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/mont-600.woff2" as="font" type="font/woff2" crossorigin>
+{{GTM_HEAD}}
+<style>
+@font-face{font-family:"Schibsted Grotesk";font-weight:700;font-display:swap;src:url(/fonts/sg-700.woff2) format("woff2")}
+@font-face{font-family:"Schibsted Grotesk";font-weight:600;font-display:swap;src:url(/fonts/sg-600.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:400;font-display:swap;src:url(/fonts/mont-400.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:500;font-display:swap;src:url(/fonts/mont-500.woff2) format("woff2")}
+@font-face{font-family:Montserrat;font-weight:600;font-display:swap;src:url(/fonts/mont-600.woff2) format("woff2")}
+:root{--navy:#081D5E;--royal:#133FAA;--royal-d:#0E3290;--ink:#070F33;--paper:#F4F6FB;--line:#D9DFEC;--muted:#5E6885;--white:#fff;--err:#B42318;
+--fh:"Schibsted Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;--fb:Montserrat,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+--r:12px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--white);color:var(--ink);font:400 16px/1.55 var(--fb);overflow-x:clip;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+img{max-width:100%;display:block}
+a{color:var(--royal)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--royal);outline-offset:2px}
+h1,h2,h3{font-family:var(--fh);font-weight:700;line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
+p{margin:0}
+.wrap{width:100%;max-width:1200px;margin:0 auto;padding-inline:max(20px,env(safe-area-inset-left,0px))}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--white);border-bottom:1px solid var(--line);padding-top:var(--sat)}
+.top .wrap{display:flex;align-items:center;gap:12px;min-height:60px}
+.logo{width:126px;height:auto}
+.top .sp{flex:1}
+.lic{display:none;font:500 13px var(--fb);color:var(--muted)}
+.call-pill{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px 0 12px;border:1.5px solid var(--royal);border-radius:24px;color:var(--royal);font-weight:600;text-decoration:none;white-space:nowrap}
+.call-pill .num{display:none}
+.back{display:none;align-items:center;gap:6px;min-height:44px;padding:0 6px 0 0;background:none;border:0;font-weight:500;font-size:15px}
+body.funnel .back{display:inline-flex}
+body.funnel .logo-link{display:none}
+/* icons */
+.ic{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ic-s{width:16px;height:16px}
+/* hero */
+.hero{background:var(--paper);padding:20px 0 28px}
+.hero .wrap{display:grid;gap:16px}
+.eyebrow{font:600 12px/1.4 var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--royal)}
+h1{font-size:clamp(29px,8.2vw,56px);line-height:1.06}
+.sub{font-size:15.5px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px 16px;box-shadow:0 8px 24px rgba(8,16,51,.07)}
+.prog{display:grid;gap:8px}
+.prog-row{display:flex;justify-content:space-between;font:600 13px var(--fb);color:var(--royal)}
+.prog-row span:last-child{color:var(--muted);font-weight:500}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--royal);border-radius:3px;transition:width .3s ease}
+.q{font:600 21px/1.2 var(--fh);margin:16px 0 12px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:104px;padding:14px;text-align:left;background:var(--white);border:1.5px solid var(--line);border-radius:var(--r);box-shadow:0 2px 8px rgba(8,16,51,.05);transition:border-color .15s,transform .1s,background .15s}
+.tile .t-top{display:flex;align-items:center;justify-content:space-between;color:var(--royal)}
+.tile .t-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:20px;background:var(--paper)}
+.tile .arr{color:var(--muted)}
+.tile b{font-weight:600;font-size:16px;line-height:1.25}
+.tile:hover{border-color:var(--royal)}
+.tile:active{transform:scale(.98)}
+.tile[aria-pressed=true]{border-color:var(--royal);border-width:2px;background:var(--paper)}
+.linkbtn{background:none;border:0;padding:12px 0 4px;color:var(--royal);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px;min-height:44px}
+.chip{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-top:8px;background:var(--white);border:1px solid var(--line);border-radius:20px;font:500 13px/1.35 var(--fb)}
+.chip .ic{color:var(--royal)}
+.micro{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font:500 12px var(--fb)}
+.micro span{display:inline-flex;align-items:center;gap:5px}
+.micro .ic{color:var(--royal)}
+/* sections */
+.sec{padding:40px 0}
+.sec h2{font-size:clamp(25px,6.4vw,38px);margin-bottom:18px}
+.alt{background:var(--paper)}
+.swipe{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;margin-inline:-20px;padding-inline:20px;scrollbar-width:none}
+.swipe::-webkit-scrollbar{display:none}
+.res{flex:0 0 min(78%,300px);scroll-snap-align:start;background:var(--navy);color:var(--white);border-radius:var(--r);padding:18px}
+.res small{display:block;font:600 12px var(--fb);letter-spacing:.06em;text-transform:uppercase;opacity:.9}
+.res .from{font:600 18px var(--fh);text-decoration:line-through;opacity:.65;margin-top:8px}
+.res .to{font:700 28px/1.1 var(--fh);margin-top:4px}
+.fine{font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:12px}
+.steps{display:grid;gap:18px;padding:0;margin:0;list-style:none;counter-reset:s}
+.steps li{display:grid;grid-template-columns:32px 1fr;gap:14px;counter-increment:s}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:32px;height:32px;border-radius:16px;background:var(--royal);color:var(--white);font:600 14px var(--fb)}
+.steps b{display:block;font-weight:600}
+.mike{display:flex;gap:16px;align-items:center}
+.mike img{width:88px;height:88px;border-radius:44px;flex:none;object-fit:cover}
+.mike b{font:600 18px var(--fh);display:block}
+.mike .lic2{font:500 12px var(--fb);color:var(--muted);display:block;margin-top:4px}
+.faq details{background:var(--white);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:14px 16px;font-weight:600;font-size:15.5px;cursor:pointer;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{color:var(--royal);transition:transform .2s}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq details p{padding:0 16px 16px;font-size:15px}
+.final{background:var(--navy);color:var(--white)}
+.final h2{color:var(--white)}
+.final .note{font:500 13px var(--fb);margin-top:14px;opacity:.95}
+footer{background:var(--ink);color:#fff;padding:24px 0 calc(110px + var(--sab));font-size:12px;line-height:1.6}
+footer p+p{margin-top:8px;opacity:.85}
+footer a{color:#fff}
+/* sticky bar */
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:10px;padding:12px 16px calc(12px + var(--sab));background:var(--white);box-shadow:0 -6px 24px rgba(8,16,51,.12);transform:translateY(110%);transition:transform .25s ease}
+.sticky.show{transform:none}
+body.funnel .sticky{display:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:0 20px;border-radius:var(--r);border:1.5px solid var(--royal);background:var(--royal);color:var(--white);font-weight:600;font-size:16px;text-decoration:none;transition:background .15s}
+.btn:hover{background:var(--royal-d)}
+.btn.ghost{background:var(--white);color:var(--royal)}
+.btn.grow{flex:1}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.7;cursor:progress}
+/* funnel screens */
+#funnel{display:none;background:var(--paper);min-height:calc(100dvh - 61px)}
+body.funnel #funnel{display:block}
+body.funnel #landing{display:none}
+.screen{display:none;max-width:560px;margin:0 auto;padding:20px 20px calc(28px + var(--sab))}
+.screen.on{display:block;animation:in .22s ease}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.screen h2{font-size:clamp(25px,7vw,32px);line-height:1.1;margin:18px 0 16px}
+.opts{display:grid;gap:10px}
+.opt{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:16px 16px 16px 18px;text-align:left;background:var(--white);border:1.5px solid var(--line);border-radius:var(--r);font-weight:600;font-size:16px;line-height:1.3}
+.opt .ic{color:var(--royal)}
+.opt:hover{border-color:var(--royal)}
+.opt[aria-pressed=true]{border:2px solid var(--royal);background:#EAF0FC}
+.answers{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 16px}
+.answers span{padding:6px 10px;background:var(--white);border:1px solid var(--line);border-radius:16px;font:500 12px var(--fb);color:var(--navy)}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field label{font-weight:600;font-size:14px}
+.field input{width:100%;min-height:54px;padding:14px;border:1.5px solid var(--line);border-radius:10px;background:var(--white);font-size:16px}
+.field input:focus{border-color:var(--royal);outline:none;box-shadow:0 0 0 3px rgba(19,63,170,.18)}
+.field .help{font:500 12px/1.45 var(--fb);color:var(--muted)}
+.field .err{font:600 13px var(--fb);color:var(--err);display:none}
+.field.bad input{border-color:var(--err)}
+.field.bad .err{display:block}
+.consent{font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:12px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.formerr{display:none;margin-bottom:12px;padding:12px 14px;border-radius:10px;background:#FDECEA;color:var(--err);font-weight:600;font-size:14px}
+.formerr.show{display:block}
+.done-ic{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;background:var(--royal);color:var(--white);margin-top:8px}
+.next{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:12px;counter-reset:n}
+.next li{display:grid;grid-template-columns:28px 1fr;gap:12px;counter-increment:n;font-size:15px}
+.next li::before{content:counter(n);display:grid;place-items:center;width:28px;height:28px;border-radius:14px;background:var(--white);border:1px solid var(--line);color:var(--royal);font:600 13px var(--fb)}
+.slots{background:var(--white);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.slots h3{font:600 15px var(--fb);margin-bottom:10px}
+.days{display:flex;gap:8px;margin-bottom:10px}
+.day{flex:1;min-height:56px;border:1.5px solid var(--line);border-radius:10px;background:var(--white);font:500 12px/1.2 var(--fb);color:var(--muted)}
+.day b{display:block;font:700 18px var(--fh);color:var(--ink)}
+.day[aria-pressed=true]{background:var(--royal);border-color:var(--royal);color:#fff}
+.day[aria-pressed=true] b{color:#fff}
+.times{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.time{min-height:48px;border:1.5px solid var(--line);border-radius:10px;background:var(--white);font-weight:600;font-size:15px;color:var(--royal)}
+.time[aria-pressed=true]{border:2px solid var(--royal);background:#EAF0FC}
+.booked{display:none;margin-top:12px;padding:12px 14px;border-radius:10px;background:#EAF0FC;font-weight:600;font-size:14px;color:var(--navy)}
+.booked.show{display:block}
+.save{display:flex;align-items:center;gap:10px;margin-top:16px;min-height:52px;padding:0 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--white);text-decoration:none;color:var(--ink);font-weight:600;font-size:15px}
+.save .ic{color:var(--royal)}
+/* desktop */
+@media (min-width:900px){
+ .top .wrap{min-height:72px}.logo{width:160px}.lic{display:block}.call-pill .num{display:inline}.call-pill .lbl{display:none}
+ .hero{padding:56px 0 64px}
+ .hero .wrap{grid-template-columns:1fr 500px;gap:56px;align-items:center}
+ .sub{font-size:19px}
+ .card{padding:28px}
+ .tile{min-height:116px}.tile b{font-size:17px}
+ .sec{padding:72px 0}
+ .swipe{margin:0;padding:0;overflow:visible;display:grid;grid-template-columns:repeat(3,1fr)}
+ .res{flex:auto}.res .to{font-size:32px}
+ .two{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+ .final .wrap{max-width:760px}
+ footer{padding-bottom:28px}
+ .sticky{display:none}
+ #funnel{padding-top:24px}
+ .screen{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px 32px 32px;box-shadow:0 8px 24px rgba(8,16,51,.07);margin-bottom:48px}
+}
+@media (max-width:899px) and (max-height:720px){
+ .hero{padding:12px 0 20px}.hero .wrap{gap:10px}h1{font-size:27px}.sub{font-size:14.5px;margin-top:8px!important}
+ .card{padding:14px}.q{margin:10px 0 10px;font-size:19px}.tile{min-height:88px;padding:12px;gap:8px}.tile .t-ic{width:34px;height:34px}
+}
+.logo-link{display:inline-flex;align-items:center;min-height:44px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+<script src="/app.js" defer></script>
+</head>
+<body data-variant="{{VARIANT}}">
+{{GTM_BODY}}
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+ <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+ <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+ <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+ <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.5 3 2.5 3.5C12 9.5 11 6 12 3z"/></symbol>
+ <symbol id="i-smoke" viewBox="0 0 24 24"><path d="M4 15c2-2 4 0 6-2s4 0 6-2 3 0 4-1M4 19c2-2 4 0 6-2s4 0 6-2 3 0 4-1M8 9c1-2 3-1 4-3s3-1 4-3"/></symbol>
+ <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+ <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5"/></symbol>
+</svg>
+
+<header class="top">
+ <div class="wrap">
+  <button class="back" type="button" id="back"><svg class="ic"><use href="#i-back"/></svg>Back</button>
+  <a class="logo-link" href="/" aria-label="Blue Star Adjusters"><img class="logo" src="/logo.svg" width="181" height="40" alt="Blue Star Adjusters"></a>
+  <span class="sp"></span>
+  <span class="lic">CA DOI License No. 2B60428 · Mon to Fri, 9 AM to 5 PM PT</span>
+  <a class="call-pill" href="tel:+19165071005" data-call="header"><svg class="ic" style="width:18px;height:18px"><use href="#i-phone"/></svg><span class="lbl">Call</span><span class="num">(916) 507-1005</span></a>
+ </div>
+</header>
+
+<main id="landing">
+ <section class="hero" aria-labelledby="h1">
+  <div class="wrap">
+   <div class="hero-copy">
+    <p class="eyebrow">Free claim review for California homeowners</p>
+    <h1 id="h1" style="margin-top:12px">{{H1}}</h1>
+    <p class="sub" style="margin-top:12px">Answer 4 quick questions. A licensed public adjuster reviews your claim and calls you back.</p>
+   </div>
+   <div class="card" id="quiz">
+    <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 1 of 4</span><span>25%</span></div><div class="bar"><i style="width:25%"></i></div></div>
+    <h2 class="q" id="q1">What happened?</h2>
+    <div class="tiles" role="group" aria-labelledby="q1">
+     <button type="button" class="tile" data-loss="fire"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-flame"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Fire</b></button>
+     <button type="button" class="tile" data-loss="smoke"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-smoke"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Smoke damage</b></button>
+     <button type="button" class="tile" data-loss="water"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-drop"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Water or a leak</b></button>
+     <button type="button" class="tile" data-loss="denied"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-doc"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Claim denied</b></button>
+    </div>
+    <button type="button" class="linkbtn" data-loss="other">Something else</button>
+    <p class="chip"><svg class="ic ic-s"><use href="#i-check"/></svg>Palisades fire: $38,000 offered. $276,000 settled.</p>
+    <p class="micro"><span><svg class="ic ic-s"><use href="#i-check"/></svg>About a minute</span><span><svg class="ic ic-s"><use href="#i-check"/></svg>No upfront cost</span><span><svg class="ic ic-s"><use href="#i-check"/></svg>CA License 2B60428</span></p>
+   </div>
+  </div>
+ </section>
+
+ <section class="sec" aria-labelledby="res-h">
+  <div class="wrap">
+   <h2 id="res-h">First offers we reopened.</h2>
+   <div class="swipe" tabindex="0" aria-label="Results, swipe for more">
+    <div class="res"><small>Palisades fire</small><p class="from">$38,000 offered</p><p class="to">$276,000 settled</p></div>
+    <div class="res"><small>Smoke damage</small><p class="from">$17,000 offered</p><p class="to">About $1.1 million</p></div>
+    <div class="res"><small>Estate fire</small><p class="from">$6 million recovered alone</p><p class="to">$11M + $5.2M contents</p></div>
+   </div>
+   <p class="fine">Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</p>
+  </div>
+ </section>
+
+ <section class="sec alt" aria-labelledby="how-h">
+  <div class="wrap two">
+   <div>
+    <h2 id="how-h">What happens next.</h2>
+    <ol class="steps">
+     <li><span><b>Answer 4 questions</b>About a minute.</span></li>
+     <li><span><b>We read your claim</b>Policy, estimate and every letter the insurer sent.</span></li>
+     <li><span><b>You decide</b>We tell you what we’d claim and what we’d charge. No pressure.</span></li>
+    </ol>
+   </div>
+   <div class="card mike" style="margin-top:24px">
+    <img src="/img/mike-176.webp" width="88" height="88" alt="Michael Rapport, Founding Principal" loading="lazy" decoding="async">
+    <p><b>Michael Rapport</b>Built homes for 25 years before he adjusted a single claim. Reads your estimate the way a contractor bids it.<span class="lic2">Founding Principal. CA DOI License No. 2B60428.</span></p>
+   </div>
+  </div>
+ </section>
+
+ <section class="sec faq" aria-labelledby="faq-h">
+  <div class="wrap two">
+   <h2 id="faq-h">Before you call.</h2>
+   <div>
+    <details open><summary>I already cashed a check. Is it too late?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.</p></details>
+    <details><summary>What does it cost?<svg class="ic"><use href="#i-chev"/></svg></summary><p>No upfront cost. We’re paid a percentage of what we recover, agreed in writing first.</p></details>
+    <details><summary>Do I still pick my own contractor?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Yes. We don’t arrange repairs. We price the work your contractor will do.</p></details>
+    <details><summary>My adjuster keeps changing.<svg class="ic"><use href="#i-chev"/></svg></summary><p>Then the next one starts from our file. Every letter, call and photo in one place.</p></details>
+   </div>
+  </div>
+ </section>
+
+ <section class="sec final" aria-labelledby="fin-h">
+  <div class="wrap">
+   <h2 id="fin-h">Start with what happened.</h2>
+   <div class="tiles">
+    <button type="button" class="tile" data-loss="fire"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-flame"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Fire</b></button>
+    <button type="button" class="tile" data-loss="smoke"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-smoke"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Smoke damage</b></button>
+    <button type="button" class="tile" data-loss="water"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-drop"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Water or a leak</b></button>
+    <button type="button" class="tile" data-loss="denied"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-doc"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Claim denied</b></button>
+   </div>
+   <p class="note">No upfront cost. We’re paid a percentage of what we recover.</p>
+  </div>
+ </section>
+</main>
+
+<div id="funnel" aria-live="polite">
+ <section class="screen" data-step="2" aria-labelledby="q2">
+  <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 2 of 4</span><span>50%</span></div><div class="bar"><i style="width:50%"></i></div></div>
+  <h2 id="q2" tabindex="-1">Where is your claim right now?</h2>
+  <div class="opts" role="group" aria-labelledby="q2">
+   <button type="button" class="opt" data-k="claim_status" data-v="not_filed">Haven’t filed yet<svg class="ic"><use href="#i-arrow"/></svg></button>
+   <button type="button" class="opt" data-k="claim_status" data-v="waiting">Filed, still waiting<svg class="ic"><use href="#i-arrow"/></svg></button>
+   <button type="button" class="opt" data-k="claim_status" data-v="low_offer">Got an offer, it looks low<svg class="ic"><use href="#i-arrow"/></svg></button>
+   <button type="button" class="opt" data-k="claim_status" data-v="denied">Denied, in full or in part<svg class="ic"><use href="#i-arrow"/></svg></button>
+  </div>
+  <p class="micro" style="margin-top:18px"><span><svg class="ic ic-s"><use href="#i-check"/></svg>No upfront cost</span><span><svg class="ic ic-s"><use href="#i-check"/></svg>We represent the insured only</span></p>
+ </section>
+
+ <section class="screen" data-step="3" aria-labelledby="q3">
+  <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 3 of 4</span><span>75%</span></div><div class="bar"><i style="width:75%"></i></div></div>
+  <h2 id="q3" tabindex="-1">When did the damage happen?</h2>
+  <div class="opts" role="group" aria-labelledby="q3">
+   <button type="button" class="opt" data-k="loss_timing" data-v="month">In the last month<svg class="ic"><use href="#i-arrow"/></svg></button>
+   <button type="button" class="opt" data-k="loss_timing" data-v="m1_6">1 to 6 months ago<svg class="ic"><use href="#i-arrow"/></svg></button>
+   <button type="button" class="opt" data-k="loss_timing" data-v="m6_12">6 to 12 months ago<svg class="ic"><use href="#i-arrow"/></svg></button>
+   <button type="button" class="opt" data-k="loss_timing" data-v="over_year">Over a year ago<svg class="ic"><use href="#i-arrow"/></svg></button>
+  </div>
+  <p class="micro" style="margin-top:18px"><span><svg class="ic ic-s"><use href="#i-check"/></svg>Older claims can still be reviewed</span></p>
+ </section>
+
+ <section class="screen" data-step="4" aria-labelledby="q4">
+  <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 4 of 4</span><span>Last step</span></div><div class="bar"><i style="width:100%"></i></div></div>
+  <h2 id="q4" tabindex="-1">Last step. Where should we call you?</h2>
+  <div class="answers" id="answers"></div>
+  <form id="lead" novalidate>
+   <div class="formerr" id="formerr" role="alert"></div>
+   <div class="field" data-f="name"><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="First and last name" required><span class="err">Please enter your name.</span></div>
+   <div class="field" data-f="phone"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" enterkeyhint="next" placeholder="(415) 555 0142" required><span class="help">A licensed adjuster calls about this claim only.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
+   <div class="field" data-f="zip"><label for="f-zip">Property ZIP code</label><input id="f-zip" name="zip" inputmode="numeric" autocomplete="postal-code" enterkeyhint="send" maxlength="5" pattern="[0-9]{5}" placeholder="94110" required><span class="err">Please enter a 5 digit ZIP code.</span></div>
+   <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+   <button class="btn block" type="submit" id="submit">Get my free review</button>
+   <p class="consent">By tapping, you agree Blue Star Adjusters may call or text you about this claim, including by automated means. Consent isn’t a condition of service. Message and data rates may apply. We don’t sell or share your details. <a href="/privacy">Privacy</a>.</p>
+  </form>
+ </section>
+
+ <section class="screen" data-step="5" aria-labelledby="q5">
+  <div class="done-ic"><svg class="ic" style="width:28px;height:28px"><use href="#i-check"/></svg></div>
+  <h2 id="q5" tabindex="-1">Got it<span id="fname"></span>. Here’s what happens next.</h2>
+  <ol class="next">
+   <li>We call you from (916) 507-1005, usually the same business day.</li>
+   <li>Have the insurer’s letter or estimate nearby if you can.</li>
+   <li>Prefer a set time? Pick one below.</li>
+  </ol>
+  <div class="slots">
+   <h3>Pick a call time (Pacific)</h3>
+   <div class="days" id="days"></div>
+   <div class="times" id="times"></div>
+   <p class="booked" id="booked" role="status"></p>
+  </div>
+  <a class="save" href="tel:+19165071005" data-call="thankyou"><svg class="ic"><use href="#i-phone"/></svg>Call us now: (916) 507-1005</a>
+ </section>
+</div>
+
+<div class="sticky" id="sticky">
+ <a class="btn ghost" href="tel:+19165071005" data-call="sticky"><svg class="ic" style="width:18px;height:18px"><use href="#i-phone"/></svg>Call</a>
+ <button class="btn grow" type="button" id="sticky-start">Start my free review</button>
+</div>
+
+<footer>
+ <div class="wrap">
+  <p>Blue Star Adjusters. 1610 R Street, Suite 300, Sacramento, California 95811. CA DOI License No. 2B60428. We represent the insured only. No upfront cost. We’re paid a percentage of what we recover.</p>
+  <p>Results reflect specific losses and policies. Past results don’t guarantee a similar outcome. Office hours: Monday to Friday, 9 AM to 5 PM Pacific. <a href="/privacy">Privacy</a></p>
+ </div>
+</footer>
+</body>
+</html>
