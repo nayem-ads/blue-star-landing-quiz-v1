@@ -11,7 +11,10 @@
 
   function load() { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
-  function dl(ev, extra) { w.dataLayer = w.dataLayer || []; var o = { event: ev, page_variant: body.dataset.variant }; for (var k in extra) o[k] = extra[k]; w.dataLayer.push(o); }
+  function dl(ev, extra) { w.dataLayer = w.dataLayer || []; var o = { event: ev, page_variant: body.dataset.variant }; for (var k in extra) o[k] = extra[k]; w.dataLayer.push(o);
+    // Meta Pixel: Lead fires only after the server saves the lead. eventID = lead id, for dedupe.
+    if (ev === 'generate_lead' && typeof w.fbq === 'function') w.fbq('track', 'Lead', { content_name: extra.loss_type, content_category: extra.claim_status }, { eventID: extra.lead_id });
+  }
 
   var state = load();
   // Keep first touch attribution for the session.
