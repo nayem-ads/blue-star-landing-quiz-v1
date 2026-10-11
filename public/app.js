@@ -12,8 +12,15 @@
   function load() { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   function dl(ev, extra) { w.dataLayer = w.dataLayer || []; var o = { event: ev, page_variant: body.dataset.variant }; for (var k in extra) o[k] = extra[k]; w.dataLayer.push(o);
-    // Meta Pixel: Lead fires only after the server saves the lead. eventID = lead id, for dedupe.
-    if (ev === 'generate_lead' && typeof w.fbq === 'function') w.fbq('track', 'Lead', { content_name: extra.loss_type, content_category: extra.claim_status }, { eventID: extra.lead_id });
+    // Meta Pixel mirrors of the same actions. Lead fires only after the server saves the lead (eventID = lead id, for dedupe).
+    if (typeof w.fbq !== 'function') return;
+    extra = extra || {};
+    if (ev === 'generate_lead') w.fbq('track', 'Lead', { content_name: extra.loss_type, content_category: extra.claim_status, form: extra.form || 'quiz' }, { eventID: extra.lead_id });
+    else if (ev === 'call_click') w.fbq('track', 'Contact', { content_name: extra.location });
+    else if (ev === 'callback_booked') w.fbq('track', 'Schedule', { content_name: extra.slot });
+    else if (ev === 'quiz_start') w.fbq('trackCustom', 'QuizStart');
+    else if (ev === 'quiz_answer') w.fbq('trackCustom', 'QuizAnswer', { step: extra.step, answer: extra.answer });
+    else if (ev === 'cta_click') w.fbq('trackCustom', 'CTAClick', { location: extra.location });
   }
 
   var state = load();
@@ -90,9 +97,9 @@
     w.scrollTo({ top: 0, behavior: 'smooth' });
     var first = quiz.querySelector('.tile'); if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 400);
   }
-  d.getElementById('sticky-start').addEventListener('click', goQuiz);
+  d.getElementById('sticky-start').addEventListener('click', function () { dl('cta_click', { location: 'sticky' }); goQuiz(); });
   var starts = d.querySelectorAll('.js-start');
-  for (var si = 0; si < starts.length; si++) starts[si].addEventListener('click', goQuiz);
+  for (var si = 0; si < starts.length; si++) starts[si].addEventListener('click', function (e) { dl('cta_click', { location: e.currentTarget.dataset.cta || 'page' }); goQuiz(); });
 
   // Progress bar fills on load.
   var bar1 = d.getElementById('bar1');
