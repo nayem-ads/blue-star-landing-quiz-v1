@@ -17,10 +17,13 @@ function rowsFor(lead) {
   return [
     ['Name', lead.name],
     ['Phone', lead.phone, `tel:+1${telDigits}`],
+    ['Form', lead.source === 'contact' ? 'Contact form (bottom of page)' : 'Quiz'],
+    ['Email', lead.email, lead.email ? `mailto:${lead.email}` : null],
     ['ZIP', lead.zip],
     ['What happened', LABELS.loss_type[lead.loss_type] || lead.loss_type],
     ['Claim status', LABELS.claim_status[lead.claim_status] || lead.claim_status],
     ['When', LABELS.loss_timing[lead.loss_timing] || lead.loss_timing],
+    ['Message', lead.notes],
     ['Received', ptTime(lead.created_at)],
     ['Page version', lead.page_variant],
     ['Source', [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(' / ') || (lead.gclid ? 'google (gclid)' : lead.fbclid ? 'meta (fbclid)' : 'direct or unknown')],
@@ -32,7 +35,7 @@ function rowsFor(lead) {
 
 function render(lead) {
   const rows = rowsFor(lead);
-  const subject = `New claim review lead: ${LABELS.loss_type[lead.loss_type] || lead.loss_type}, ${LABELS.claim_status[lead.claim_status] || ''} (${lead.zip})`;
+  const subject = `New ${lead.source === 'contact' ? 'contact form' : 'claim review'} lead: ${LABELS.loss_type[lead.loss_type] || lead.loss_type}${lead.claim_status ? ', ' + (LABELS.claim_status[lead.claim_status] || '') : ''} (${lead.zip})`;
   const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#0E1630">
 <p style="margin:0 0 12px"><b>New lead from the Quiz First landing page.</b> Call within the hour if you can, during 9 AM to 5 PM Pacific.</p>
 <table cellpadding="8" style="border-collapse:collapse;border:1px solid #D9DFEC">${rows.map(([k, v, href]) =>

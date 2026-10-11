@@ -11,10 +11,18 @@ const clip = (v, n) => (typeof v === 'string' ? v.trim().slice(0, n) : '');
 function validateLead(b) {
   const errors = {};
   const out = {};
+  // source 'contact' = bottom contact form: claim status and timing are optional there.
+  const contact = b.source === 'contact';
+  out.source = contact ? 'contact' : 'quiz';
   for (const k of ['loss_type', 'claim_status', 'loss_timing']) {
-    if (!LABELS[k][b[k]]) errors[k] = 'Please choose an answer.';
-    else out[k] = b[k];
+    if (LABELS[k][b[k]]) out[k] = b[k];
+    else if (contact && k !== 'loss_type' && !b[k]) out[k] = null;
+    else errors[k] = 'Please choose an answer.';
   }
+  const email = clip(b.email, 200);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = 'Please check the email address.';
+  out.email = email || null;
+  out.notes = clip(b.notes, 1000) || null;
   const name = clip(b.name, 80).replace(/\s+/g, ' ');
   if (name.length < 2 || !/[a-zA-Z]/.test(name)) errors.name = 'Please enter your name.';
   out.name = name;

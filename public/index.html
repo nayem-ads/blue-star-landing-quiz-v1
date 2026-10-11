@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Free Insurance Claim Review | Blue Star Adjusters</title>
-<meta name="description" content="Insurance offer too low after a fire, smoke or water loss? Answer 4 quick questions and a licensed public adjuster reviews your claim for free. CA DOI License 2B60428.">
+<title>Public Adjuster Free Claim Review | Blue Star Adjusters</title>
+<meta name="description" content="Insurance offer too low after a fire, smoke or water loss? A licensed California public adjuster reviews your claim for free. Answer 4 quick questions. CA DOI License 2B60428.">
 <meta name="robots" content="{{ROBOTS}}">
 <meta name="theme-color" content="#081D5E">
 <meta name="format-detection" content="telephone=no">
-<meta property="og:title" content="Free insurance claim review | Blue Star Adjusters">
+<meta property="og:title" content="Free claim review by a licensed public adjuster | Blue Star Adjusters">
 <meta property="og:description" content="A licensed public adjuster reviews your claim and calls you back. No upfront cost.">
 <meta property="og:type" content="website">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -23,15 +23,15 @@
 @font-face{font-family:Montserrat;font-weight:400;font-display:swap;src:url(/fonts/mont-400.woff2) format("woff2")}
 @font-face{font-family:Montserrat;font-weight:500;font-display:swap;src:url(/fonts/mont-500.woff2) format("woff2")}
 @font-face{font-family:Montserrat;font-weight:600;font-display:swap;src:url(/fonts/mont-600.woff2) format("woff2")}
-:root{--navy:#081D5E;--royal:#133FAA;--royal-d:#0E3290;--ink:#070F33;--paper:#F4F6FB;--line:#D9DFEC;--muted:#5E6885;--white:#fff;--err:#B42318;
+:root{--navy:#081D5E;--royal:#133FAA;--royal-d:#0E3290;--blue:#2563EB;--ink:#070F33;--paper:#F4F6FB;--tint:#E4EBFB;--line:#D9DFEC;--muted:#5B6478;--white:#fff;--err:#B42318;--green:#15803D;--mint:#86EFAC;
 --fh:"Schibsted Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;--fb:Montserrat,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
---r:12px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
+--r:12px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--grad:linear-gradient(90deg,#133FAA,#2563EB);--navgrad:linear-gradient(90deg,#081D5E,#133FAA)}
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{margin:0;background:var(--white);color:var(--ink);font:400 16px/1.55 var(--fb);overflow-x:clip;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 img{max-width:100%;display:block}
 a{color:var(--royal)}
-button,input{font:inherit;color:inherit}
+button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;touch-action:manipulation}
 :focus-visible{outline:3px solid var(--royal);outline-offset:2px}
 h1,h2,h3{font-family:var(--fh);font-weight:700;line-height:1.08;margin:0;letter-spacing:-.01em;text-wrap:balance}
@@ -41,7 +41,9 @@ p{margin:0}
 /* top bar */
 .top{position:sticky;top:0;z-index:20;background:var(--white);border-bottom:1px solid var(--line);padding-top:var(--sat)}
 .top .wrap{display:flex;align-items:center;gap:12px;min-height:60px}
+.logo-link{display:inline-flex;flex-direction:column;justify-content:center;min-height:44px;text-decoration:none}
 .logo{width:126px;height:auto}
+.lic-m{font:500 11px/1.2 var(--fb);color:var(--muted);margin-top:3px}
 .top .sp{flex:1}
 .lic{display:none;font:500 13px var(--fb);color:var(--muted)}
 .call-pill{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 14px 0 12px;border:1.5px solid var(--royal);border-radius:24px;color:var(--royal);font-weight:600;text-decoration:none;white-space:nowrap}
@@ -53,74 +55,200 @@ body.funnel .logo-link{display:none}
 .ic{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .ic-s{width:16px;height:16px}
 /* hero */
-.hero{background:var(--paper);padding:20px 0 28px}
-.hero .wrap{display:grid;gap:16px}
-.eyebrow{font:600 12px/1.4 var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--royal)}
-h1{font-size:clamp(29px,8.2vw,56px);line-height:1.06}
-.sub{font-size:15.5px}
+.hero{background:linear-gradient(180deg,#F4F6FB 0%,#E4EBFB 100%);padding:18px 0 32px}
+.hero .wrap{display:grid;gap:16px;grid-template-areas:"copy" "quiz" "proof"}
+.hero-copy{grid-area:copy}.quiz-col{grid-area:quiz}.proof-col{grid-area:proof;display:grid;gap:14px}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 10px;border-radius:999px;background:rgba(19,63,170,.1);font:600 11px/1.3 var(--fb);letter-spacing:.05em;text-transform:uppercase;color:var(--royal)}
+.dot{width:8px;height:8px;border-radius:50%;background:#16A34A;flex:none;box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}70%{box-shadow:0 0 0 8px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+h1{font-size:clamp(29px,8.2vw,56px);line-height:1.06;margin-top:12px}
+h1 .hl{color:var(--royal)}
+.sub{font-size:15.5px;margin-top:12px}
 .card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px 16px;box-shadow:0 8px 24px rgba(8,16,51,.07)}
+.qcard{background:var(--white);border:1.5px solid rgba(19,63,170,.22);border-radius:20px;overflow:hidden;box-shadow:0 12px 32px rgba(19,63,170,.16)}
+.qhead{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--navgrad);color:#fff;font:600 13px var(--fb)}
+.qhead .tag{margin-left:auto;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.16);font-size:11px;white-space:nowrap}
+.qbody{padding:14px 12px 16px}
 .prog{display:grid;gap:8px}
 .prog-row{display:flex;justify-content:space-between;font:600 13px var(--fb);color:var(--royal)}
 .prog-row span:last-child{color:var(--muted);font-weight:500}
 .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--royal);border-radius:3px;transition:width .3s ease}
-.q{font:600 21px/1.2 var(--fh);margin:16px 0 12px}
+.bar i{display:block;height:100%;background:var(--grad);border-radius:3px;transition:width .6s ease}
+.q{font:600 21px/1.2 var(--fh);margin:14px 0 12px}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.tile{color:var(--ink);display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:104px;padding:14px;text-align:left;background:var(--white);border:1.5px solid var(--line);border-radius:var(--r);box-shadow:0 2px 8px rgba(8,16,51,.05);transition:border-color .15s,transform .1s,background .15s}
-.tile .t-top{display:flex;align-items:center;justify-content:space-between;color:var(--royal)}
+.tile{color:var(--ink);display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:104px;padding:14px 12px;text-align:left;background:var(--white);border:1.5px solid rgba(19,63,170,.16);border-radius:14px;box-shadow:0 4px 12px rgba(8,29,94,.06);transition:border-color .15s,transform .15s,background .15s,box-shadow .15s}
+.tile .t-top{display:flex;align-items:center;justify-content:space-between}
 .tile .t-ic{display:grid;place-items:center;width:40px;height:40px;border-radius:20px;background:var(--paper)}
-.tile .arr{color:var(--muted)}
-.tile b{font-weight:600;font-size:16px;line-height:1.25}
-.tile:hover{border-color:var(--royal)}
+.tile .arr{color:var(--royal);transition:transform .15s}
+.tile b{font-weight:600;font-size:15px;line-height:1.25}
+.tile[data-loss=fire] .t-ic{background:#FDE8E1;color:#D9480F}
+.tile[data-loss=smoke] .t-ic{background:#EAEDF3;color:#475569}
+.tile[data-loss=water] .t-ic{background:#E0EEFC;color:#1D6FD8}
+.tile[data-loss=denied] .t-ic{background:#FFF1D1;color:#B7791F}
+.tile:hover{border-color:var(--royal);transform:translateY(-2px);box-shadow:0 8px 18px rgba(19,63,170,.14)}
+.tile:hover .arr{transform:translateX(3px)}
 .tile:active{transform:scale(.98)}
-.tile[aria-pressed=true]{border-color:var(--royal);border-width:2px;background:var(--paper)}
+.tile[aria-pressed=true]{border-color:var(--royal);border-width:2px;background:#F3F6FE}
 .linkbtn{background:none;border:0;padding:12px 0 4px;color:var(--royal);font-weight:600;font-size:14px;text-decoration:underline;text-underline-offset:3px;min-height:44px}
-.chip{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-top:8px;background:var(--white);border:1px solid var(--line);border-radius:20px;font:500 13px/1.35 var(--fb)}
-.chip .ic{color:var(--royal)}
-.micro{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font:500 12px var(--fb)}
-.micro span{display:inline-flex;align-items:center;gap:5px}
-.micro .ic{color:var(--royal)}
-/* sections */
-.sec{padding:40px 0}
-.sec h2{font-size:clamp(25px,6.4vw,38px);margin-bottom:18px}
-.alt{background:var(--paper)}
-.swipe{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;margin-inline:-20px;padding-inline:20px;scrollbar-width:none}
-.swipe::-webkit-scrollbar{display:none}
-.res{flex:0 0 min(78%,300px);scroll-snap-align:start;background:var(--navy);color:var(--white);border-radius:var(--r);padding:18px}
-.res small{display:block;font:600 12px var(--fb);letter-spacing:.06em;text-transform:uppercase;opacity:.9}
-.res .from{font:600 18px var(--fh);text-decoration:line-through;opacity:.65;margin-top:8px}
-.res .to{font:700 28px/1.1 var(--fh);margin-top:4px}
-.fine{font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:12px}
-.steps{display:grid;gap:18px;padding:0;margin:0;list-style:none;counter-reset:s}
-.steps li{display:grid;grid-template-columns:32px 1fr;gap:14px;counter-increment:s}
-.steps li::before{content:counter(s);display:grid;place-items:center;width:32px;height:32px;border-radius:16px;background:var(--royal);color:var(--white);font:600 14px var(--fb)}
-.steps b{display:block;font-weight:600}
-.mike{display:flex;gap:16px;align-items:center}
-.mike img{width:88px;height:88px;border-radius:44px;flex:none;object-fit:cover}
-.mike b{font:600 18px var(--fh);display:block}
-.mike .lic2{font:500 12px var(--fb);color:var(--muted);display:block;margin-top:4px}
-.faq details{background:var(--white);border:1px solid var(--line);border-radius:var(--r);margin-bottom:10px}
-.faq summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:14px 16px;font-weight:600;font-size:15.5px;cursor:pointer;list-style:none}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary .ic{color:var(--royal);transition:transform .2s}
-.faq details[open] summary .ic{transform:rotate(180deg)}
-.faq details p{padding:0 16px 16px;font-size:15px}
-.final{background:var(--navy);color:var(--white)}
-.final h2{color:var(--white)}
-.final .note{font:500 13px var(--fb);margin-top:14px;opacity:.95}
-footer{background:var(--ink);color:#fff;padding:24px 0 calc(110px + var(--sab));font-size:12px;line-height:1.6}
-footer p+p{margin-top:8px;opacity:.85}
-footer a{color:#fff}
-/* sticky bar */
-.sticky{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:10px;padding:12px 16px calc(12px + var(--sab));background:var(--white);box-shadow:0 -6px 24px rgba(8,16,51,.12);transform:translateY(110%);transition:transform .25s ease}
-.sticky.show{transform:none}
-body.funnel .sticky{display:none}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:0 20px;border-radius:var(--r);border:1.5px solid var(--royal);background:var(--royal);color:var(--white);font-weight:600;font-size:16px;text-decoration:none;transition:background .15s}
-.btn:hover{background:var(--royal-d)}
-.btn.ghost{background:var(--white);color:var(--royal)}
+.result{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:12px 14px;border-radius:16px;background:#ECF8F1;border:1px solid #86CFA4;font:500 14px/1.45 var(--fb)}
+.result .ic{color:var(--green);margin-top:2px}
+.result b{color:var(--green);font-weight:600}
+.fine{font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:8px}
+.trust{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;margin-top:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--white);font:600 13px/1.35 var(--fb)}
+.trust li{display:flex;gap:8px;list-style:none}
+.trust .ic{color:var(--green)}
+.trust .sh{color:var(--royal)}
+.trust a{display:inline-block;margin-top:2px;font-weight:600}
+.trust ul{display:contents}
+/* field proof */
+.photo{position:relative;border-radius:16px;overflow:hidden;background:var(--line)}
+.photo img{width:100%;height:100%;object-fit:cover}
+.photo.r1610{aspect-ratio:16/10}
+.photo.wide{aspect-ratio:4/3}
+.cap{position:absolute;left:0;right:0;bottom:0;padding:12px 16px;background:var(--navy);color:#fff;font:500 13px/1.45 var(--fb)}
+.capchip{position:absolute;left:12px;top:12px;padding:6px 12px;border-radius:999px;background:rgba(8,29,94,.85);color:#fff;font:500 12px var(--fb)}
+.mchip{display:flex;gap:12px;align-items:center}
+.mchip img{width:52px;height:52px;border-radius:26px;object-fit:cover;flex:none;border:2px solid #fff;box-shadow:0 2px 8px rgba(8,29,94,.15)}
+.mchip b{display:block;font:600 14px/1.3 var(--fb)}
+.mchip span{font-size:13px;color:var(--muted)}
+.logos{display:grid;gap:10px}
+.logos .lbl{font:600 12px var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ltrack{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;scroll-behavior:smooth}
+.ltrack::-webkit-scrollbar{display:none}
+.lcard{flex:0 0 calc((100% - 16px)/3);scroll-snap-align:start;display:grid;place-items:center;height:64px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.lcard img{max-height:46px;width:auto;object-fit:contain}
+.ldots{display:flex;gap:6px}
+.ldots i{width:6px;height:6px;border-radius:3px;background:#C7D0E4;transition:width .2s,background .2s}
+.ldots i.on{width:18px;background:var(--royal)}
+/* CTA block */
+.cta{display:grid;gap:8px;justify-items:center;text-align:center}
+.cta .btn{width:100%}
+.cta small{font:500 12px var(--fb);color:var(--muted)}
+.call-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;font:600 14px var(--fb);color:var(--royal);text-decoration:none}
+/* buttons */
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:0 22px;border-radius:999px;border:0;background:var(--grad);color:var(--white);font-weight:600;font-size:16px;text-decoration:none;box-shadow:0 8px 20px rgba(19,63,170,.35);transition:transform .15s,box-shadow .15s}
+.btn::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);transform:translateX(-120%);animation:shine 6s ease-in-out infinite}
+@keyframes shine{0%,80%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+.btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(19,63,170,.4)}
+.btn .ic{width:18px;height:18px}
+.btn.ghost{background:var(--white);color:var(--royal);border:1.5px solid var(--royal);box-shadow:none}
+.btn.ghost::after,.btn.light::after,.btn.outline::after{display:none}
+.btn.light{background:#fff;color:var(--navy);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.btn.outline{background:transparent;border:1.5px solid rgba(255,255,255,.7);box-shadow:none}
 .btn.grow{flex:1}
 .btn.block{width:100%}
 .btn[disabled]{opacity:.7;cursor:progress}
+/* sections */
+.sec{padding:44px 0}
+.sec h2{font-size:clamp(26px,6.6vw,40px);margin-bottom:14px}
+.eb{display:flex;align-items:center;gap:10px;font:600 12px var(--fb);letter-spacing:.06em;text-transform:uppercase;color:var(--royal);margin-bottom:10px}
+.eb::before{content:"";width:22px;height:2px;background:var(--royal)}
+.lead{font-size:15.5px;margin:-4px 0 18px}
+.alt{background:var(--paper)}
+.soft{background:linear-gradient(180deg,#fff,#EEF3FD)}
+/* results */
+.rescards{display:grid;gap:12px;margin-top:14px}
+.res{background:var(--navy);color:#fff;border-radius:18px;padding:18px;box-shadow:0 10px 24px rgba(8,29,94,.25)}
+.res .lab{display:flex;align-items:center;gap:8px;font:600 12px var(--fb);letter-spacing:.06em;text-transform:uppercase}
+.res .lab span{display:grid;place-items:center;width:30px;height:30px;border-radius:15px;background:rgba(255,255,255,.12)}
+.res .lab .ic{width:16px;height:16px}
+.res .off{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.16);font-size:14px;color:#C9D3F0}
+.res .off b{color:#fff;font-weight:600}
+.res .st{margin-top:12px;font-size:13px;color:#C9D3F0}
+.res .to{font:600 38px/1.1 var(--fh);color:var(--mint)}
+.res .to small{font:500 15px var(--fb);color:#fff}
+.bars{display:grid;gap:5px;margin-top:14px}
+.bars i{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.bars i::before{content:"";display:block;height:100%;width:0;border-radius:3px;background:rgba(255,255,255,.55);transition:width .7s ease-out}
+.bars i+i::before{background:linear-gradient(90deg,#22C55E,#86EFAC)}
+.bars.in i::before{width:var(--w)}
+/* estimate */
+.marked{position:relative;aspect-ratio:7/8;border-radius:16px;overflow:hidden;background:var(--line)}
+.marked img{width:100%;height:100%;object-fit:cover}
+.pin{position:absolute;width:15%;aspect-ratio:1;transform:translate(-50%,-50%);border:2.5px solid #E5484D;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.5)}
+.pin b{position:absolute;right:-6px;top:-6px;display:grid;place-items:center;width:20px;height:20px;border-radius:10px;background:#fff;border:2px solid #E5484D;color:#C2272D;font:600 11px var(--fb)}
+.dim{display:flex;align-items:center;gap:10px;margin:10px 0 18px;color:var(--royal);font:500 12px var(--fb)}
+.dim::before,.dim::after{content:"";flex:1;height:1px;background:var(--royal);opacity:.5}
+.missed{list-style:none;margin:0 0 20px;padding:4px 16px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 6px 16px rgba(8,29,94,.06)}
+.missed li{display:grid;grid-template-columns:24px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px}
+.missed li:last-child{border:0}
+.missed li span{display:grid;place-items:center;width:24px;height:24px;border-radius:12px;border:1.5px solid #E5484D;color:#C2272D;font:600 12px var(--fb)}
+/* steps + founder */
+.steps{display:grid;gap:22px;padding:0;margin:0;list-style:none;counter-reset:s}
+.steps li{display:grid;grid-template-columns:32px 1fr;gap:14px;counter-increment:s}
+.steps li::before{content:counter(s);display:grid;place-items:center;width:32px;height:32px;border-radius:16px;background:var(--grad);box-shadow:0 4px 10px rgba(19,63,170,.3);color:var(--white);font:600 14px var(--fb)}
+.steps b{display:block;font-weight:600}
+.founder{margin-top:28px;background:#fff;border:1.5px solid rgba(19,63,170,.25);border-radius:20px;padding:22px 20px;box-shadow:0 10px 28px rgba(19,63,170,.12)}
+.founder .qt{color:var(--royal);width:30px;height:30px}
+.founder .id{display:flex;gap:16px;align-items:center;margin:8px 0 14px}
+.founder .id img{width:96px;height:96px;border-radius:48px;object-fit:cover;flex:none}
+.founder .id b{display:block;font:600 22px/1.15 var(--fh)}
+.founder .id span{font:600 12px var(--fb);color:var(--royal)}
+.founder .lic2{display:flex;gap:6px;align-items:center;margin-top:14px;font:600 12px var(--fb);color:var(--ink)}
+.founder .lic2 .ic{color:var(--royal);width:16px;height:16px}
+/* vetting + faq */
+.vet{background:linear-gradient(180deg,#EAF1FF,#F7F9FE);border:1px solid rgba(19,63,170,.2);border-radius:16px;padding:20px 18px}
+.vet .ic.doc{color:var(--royal)}
+.vet h3{font:600 21px/1.25 var(--fh);margin:10px 0 14px}
+.vet ul{list-style:none;padding:0;margin:0;display:grid;gap:14px}
+.vet li{display:grid;grid-template-columns:24px 1fr;gap:12px;font-size:15px}
+.vet li span{display:grid;place-items:center;width:24px;height:24px;border-radius:12px;background:rgba(21,128,61,.12);color:var(--green)}
+.vet li .ic{width:14px;height:14px}
+.vetcta{margin-top:18px}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:14px 12px;font-weight:600;font-size:15.5px;cursor:pointer;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary .ic{color:var(--royal);transition:transform .2s}
+.faq details[open]{background:#F3F6FE;box-shadow:inset 3px 0 0 var(--royal)}
+.faq details[open] summary .ic{transform:rotate(180deg)}
+.faq details p{padding:0 12px 16px;font-size:15px}
+/* cta band */
+.band{background:linear-gradient(180deg,#081D5E,#133FAA);color:#fff;padding:40px 0}
+.band .wrap{display:grid;gap:16px}
+.band h2{color:#fff;font-size:clamp(28px,7vw,42px)}
+.band p{color:#DCE5FB;font-size:15.5px}
+.band .btns{display:grid;gap:12px}
+.band small{font:500 12px var(--fb);color:#B9C7EE;text-align:center}
+/* contact */
+.contact .wrap{display:grid;gap:22px}
+.callrow{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px}
+.callrow a{font-weight:600}
+.callrow .ic{color:var(--royal);width:18px;height:18px}
+.hours{font-size:13px;color:var(--muted);margin-top:4px}
+.form{background:#fff;border:1.5px solid rgba(19,63,170,.25);border-radius:20px;padding:16px;box-shadow:0 12px 32px rgba(19,63,170,.14)}
+.fhead{display:flex;gap:8px;align-items:center;padding:10px 12px;margin-bottom:16px;border-radius:12px;background:var(--navgrad);color:#fff;font:600 12px/1.4 var(--fb)}
+.fhead .ic{width:16px;height:16px;flex:none}
+.field{display:grid;gap:6px;margin-bottom:14px}
+.field label{font-weight:600;font-size:14px}
+.field input,.field select,.field textarea{width:100%;min-height:52px;padding:13px 14px;border:1.5px solid #B9C3DA;border-radius:10px;background:var(--white);font-size:16px}
+.field select{appearance:none;-webkit-appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23133FAA' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E") no-repeat right 12px center}
+.field textarea{min-height:110px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--royal);outline:none;box-shadow:0 0 0 3px rgba(19,63,170,.18)}
+.field .help{font:500 12px/1.45 var(--fb);color:var(--muted)}
+.field .err{font:600 13px var(--fb);color:var(--err);display:none}
+.field.bad input{border-color:var(--err)}
+.field.bad .err{display:block}
+.consent{font-size:11.5px;line-height:1.5;color:var(--muted);margin:4px 0 14px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.formerr{display:none;margin-bottom:12px;padding:12px 14px;border-radius:10px;background:#FDECEA;color:var(--err);font-weight:600;font-size:14px}
+.formerr.show{display:block}
+.fnote{text-align:center;font-size:13px;color:var(--muted);margin-top:10px}
+.sent{display:none;text-align:center;padding:24px 8px}
+.sent h3{font:700 24px/1.2 var(--fh);margin:12px 0 8px}
+.form.ok form{display:none}.form.ok .sent{display:block}
+/* footer */
+footer{background:var(--ink);color:#fff;padding:32px 0 calc(110px + var(--sab));font-size:13px;line-height:1.6}
+footer .cols{display:grid;gap:22px}
+footer h3{font:600 17px var(--fh);margin-bottom:8px}
+footer p{opacity:.85}
+footer p+p{margin-top:6px}
+footer a{color:#fff}
+footer .legal{display:flex;justify-content:space-between;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid rgba(255,255,255,.18);font-size:12px}
+/* sticky bar */
+.sticky{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:10px;padding:12px 16px calc(12px + var(--sab));background:var(--white);box-shadow:0 -6px 24px rgba(8,16,51,.12);transform:translateY(110%);transition:transform .25s ease}
+.sticky.show{transform:none}
+.sticky .btn{min-height:50px;font-size:15px;padding:0 16px}
+body.funnel .sticky{display:none}
 /* funnel screens */
 #funnel{display:none;background:var(--paper);min-height:calc(100dvh - 61px)}
 body.funnel #funnel{display:block}
@@ -134,20 +262,13 @@ body.funnel #landing{display:none}
 .opt .ic{color:var(--royal)}
 .opt:hover{border-color:var(--royal)}
 .opt[aria-pressed=true]{border:2px solid var(--royal);background:#EAF0FC}
+.micro{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font:500 12px var(--fb)}
+.micro span{display:inline-flex;align-items:center;gap:5px}
+.micro .ic{color:var(--royal)}
 .answers{display:flex;flex-wrap:wrap;gap:8px;margin:-4px 0 16px}
 .answers span{padding:6px 10px;background:var(--white);border:1px solid var(--line);border-radius:16px;font:500 12px var(--fb);color:var(--navy)}
-.field{display:grid;gap:6px;margin-bottom:14px}
-.field label{font-weight:600;font-size:14px}
-.field input{width:100%;min-height:54px;padding:14px;border:1.5px solid var(--line);border-radius:10px;background:var(--white);font-size:16px}
-.field input:focus{border-color:var(--royal);outline:none;box-shadow:0 0 0 3px rgba(19,63,170,.18)}
-.field .help{font:500 12px/1.45 var(--fb);color:var(--muted)}
-.field .err{font:600 13px var(--fb);color:var(--err);display:none}
-.field.bad input{border-color:var(--err)}
-.field.bad .err{display:block}
-.consent{font-size:11.5px;line-height:1.5;color:var(--muted);margin-top:12px}
-.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-.formerr{display:none;margin-bottom:12px;padding:12px 14px;border-radius:10px;background:#FDECEA;color:var(--err);font-weight:600;font-size:14px}
-.formerr.show{display:block}
+.screen .field input{border-color:var(--line);min-height:54px}
+.screen .consent{margin-top:12px}
 .done-ic{display:grid;place-items:center;width:56px;height:56px;border-radius:28px;background:var(--royal);color:var(--white);margin-top:8px}
 .next{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:12px;counter-reset:n}
 .next li{display:grid;grid-template-columns:28px 1fr;gap:12px;counter-increment:n;font-size:15px}
@@ -166,30 +287,47 @@ body.funnel #landing{display:none}
 .booked.show{display:block}
 .save{display:flex;align-items:center;gap:10px;margin-top:16px;min-height:52px;padding:0 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--white);text-decoration:none;color:var(--ink);font-weight:600;font-size:15px}
 .save .ic{color:var(--royal)}
+/* load motion */
+.rise{animation:rise .45s ease-out both}
+.hero-copy.rise{animation-delay:0s}.qcard.rise{animation-delay:.12s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.qcard .tile{animation:rise .35s ease-out both}
+.qcard .tile:nth-child(1){animation-delay:.25s}.qcard .tile:nth-child(2){animation-delay:.31s}.qcard .tile:nth-child(3){animation-delay:.37s}.qcard .tile:nth-child(4){animation-delay:.43s}
 /* desktop */
 @media (min-width:900px){
- .top .wrap{min-height:72px}.logo{width:160px}.lic{display:block}.call-pill .num{display:inline}.call-pill .lbl{display:none}
- .hero{padding:56px 0 64px}
- .hero .wrap{grid-template-columns:1fr 500px;gap:56px;align-items:center}
+ .top .wrap{min-height:72px}.logo{width:160px}.lic-m{display:none}.lic{display:block}.call-pill .num{display:inline}.call-pill .lbl{display:none}
+ .hero{padding:48px 0 64px}
+ .hero .wrap{grid-template-columns:1fr 500px;grid-template-areas:"copy quiz" "proof quiz";column-gap:56px;row-gap:20px;align-items:start}
  .sub{font-size:19px}
- .card{padding:28px}
- .tile{min-height:116px}.tile b{font-size:17px}
- .sec{padding:72px 0}
- .swipe{margin:0;padding:0;overflow:visible;display:grid;grid-template-columns:repeat(3,1fr)}
- .res{flex:auto}.res .to{font-size:32px}
- .two{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
- .final .wrap{max-width:760px}
+ .qbody{padding:20px 24px 24px}.qhead{padding:14px 24px;font-size:14px}
+ .tile{min-height:116px;padding:16px}.tile b{font-size:17px}
+ .ltrack{overflow:visible}.lcard{flex:0 0 120px;height:68px}.ldots,.hero .cta{display:none}
+ .sec{padding:76px 0}
+ .two{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:start}
+ .photo.wide{aspect-ratio:21/9}
+ .rescards{grid-template-columns:repeat(3,1fr);margin:-110px 24px 0;position:relative}
+ .ctarow{display:flex;align-items:center;gap:20px;justify-content:flex-start;text-align:left}
+ .ctarow .btn{width:auto}
+ .est .wrap{grid-template-columns:.9fr 1fr}
+ .est .cta{justify-items:start}.est .cta .btn{width:auto}
+ .founder{margin-top:0}
+ .vetcta{justify-items:start}.vetcta .btn{width:auto}
+ .band{padding:64px 0}
+ .band .wrap{grid-template-columns:1fr auto;align-items:center;gap:48px}
+ .band .btns{min-width:300px}
+ .contact .wrap{grid-template-columns:1fr 520px;gap:56px;align-items:center}
+ .form{padding:24px}
  footer{padding-bottom:28px}
+ footer .cols{grid-template-columns:1.2fr 1fr 1fr}
  .sticky{display:none}
  #funnel{padding-top:24px}
  .screen{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:28px 32px 32px;box-shadow:0 8px 24px rgba(8,16,51,.07);margin-bottom:48px}
 }
 @media (max-width:899px) and (max-height:720px){
- .hero{padding:12px 0 20px}.hero .wrap{gap:10px}h1{font-size:27px}.sub{font-size:14.5px;margin-top:8px!important}
- .card{padding:14px}.q{margin:10px 0 10px;font-size:19px}.tile{min-height:88px;padding:12px;gap:8px}.tile .t-ic{width:34px;height:34px}
+ .hero{padding:12px 0 20px}.hero .wrap{gap:10px}h1{font-size:27px;margin-top:8px}.sub{font-size:14.5px;margin-top:8px}
+ .qbody{padding:10px 12px 12px}.qhead{padding:8px 14px}.q{margin:8px 0 8px;font-size:19px}.tile{min-height:86px;padding:10px;gap:6px}.tile .t-ic{width:34px;height:34px}
 }
-.logo-link{display:inline-flex;align-items:center;min-height:44px}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 <script src="/app.js" defer></script>
 </head>
@@ -206,12 +344,18 @@ body.funnel #landing{display:none}
  <symbol id="i-smoke" viewBox="0 0 24 24"><path d="M4 15c2-2 4 0 6-2s4 0 6-2 3 0 4-1M4 19c2-2 4 0 6-2s4 0 6-2 3 0 4-1M8 9c1-2 3-1 4-3s3-1 4-3"/></symbol>
  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5"/></symbol>
+ <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+ <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+ <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+ <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V5l8-2v18M12 8l8 2v11M3 21h18M7 8h2M7 12h2M7 16h2M15 13h2M15 17h2"/></symbol>
+ <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"/></symbol>
+ <symbol id="i-quote" viewBox="0 0 24 24"><path d="M9 7H6a2 2 0 0 0-2 2v3h5v5H4M20 7h-3a2 2 0 0 0-2 2v3h5v5h-5"/></symbol>
 </svg>
 
 <header class="top">
  <div class="wrap">
   <button class="back" type="button" id="back"><svg class="ic"><use href="#i-back"/></svg>Back</button>
-  <a class="logo-link" href="/" aria-label="Blue Star Adjusters"><img class="logo" src="/logo.svg" width="181" height="40" alt="Blue Star Adjusters"></a>
+  <a class="logo-link" href="/"><img class="logo" src="/logo.svg" width="181" height="40" alt="Blue Star Adjusters"><span class="lic-m">CA Lic. 2B60428</span></a>
   <span class="sp"></span>
   <span class="lic">CA DOI License No. 2B60428 · Mon to Fri, 9 AM to 5 PM PT</span>
   <a class="call-pill" href="tel:+19165071005" data-call="header"><svg class="ic" style="width:18px;height:18px"><use href="#i-phone"/></svg><span class="lbl">Call</span><span class="num">(916) 507-1005</span></a>
@@ -221,78 +365,223 @@ body.funnel #landing{display:none}
 <main id="landing">
  <section class="hero" aria-labelledby="h1">
   <div class="wrap">
-   <div class="hero-copy">
-    <p class="eyebrow">Free claim review for California homeowners</p>
-    <h1 id="h1" style="margin-top:12px">{{H1}}</h1>
-    <p class="sub" style="margin-top:12px">Answer 4 quick questions. A licensed public adjuster reviews your claim and calls you back.</p>
+   <div class="hero-copy rise">
+    <p class="pill"><span class="dot" aria-hidden="true"></span>Free review by a licensed public adjuster</p>
+    <h1 id="h1">{{H1}}</h1>
+    <p class="sub">Answer 4 quick questions. A licensed public adjuster reviews your claim and calls you back.</p>
    </div>
-   <div class="card" id="quiz">
-    <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 1 of 4</span><span>25%</span></div><div class="bar"><i style="width:25%"></i></div></div>
-    <h2 class="q" id="q1">What happened?</h2>
-    <div class="tiles" role="group" aria-labelledby="q1">
-     <button type="button" class="tile" data-loss="fire"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-flame"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Fire</b></button>
-     <button type="button" class="tile" data-loss="smoke"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-smoke"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Smoke damage</b></button>
-     <button type="button" class="tile" data-loss="water"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-drop"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Water or a leak</b></button>
-     <button type="button" class="tile" data-loss="denied"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-doc"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Claim denied</b></button>
+
+   <div class="quiz-col">
+    <div class="qcard rise" id="quiz">
+     <div class="qhead"><svg class="ic ic-s" aria-hidden="true"><use href="#i-clock"/></svg>Takes about a minute<span class="tag">No obligation</span></div>
+     <div class="qbody">
+      <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 1 of 4</span><span>25%</span></div><div class="bar"><i id="bar1" style="width:0"></i></div></div>
+      <h2 class="q" id="q1">What happened?</h2>
+      <div class="tiles" role="group" aria-labelledby="q1">
+       <button type="button" class="tile" data-loss="fire"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-flame"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Fire</b></button>
+       <button type="button" class="tile" data-loss="smoke"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-smoke"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Smoke damage</b></button>
+       <button type="button" class="tile" data-loss="water"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-drop"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Water or a leak</b></button>
+       <button type="button" class="tile" data-loss="denied"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-doc"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Claim denied</b></button>
+      </div>
+      <button type="button" class="linkbtn" data-loss="other">Something else</button>
+     </div>
     </div>
-    <button type="button" class="linkbtn" data-loss="other">Something else</button>
-    <p class="chip"><svg class="ic ic-s"><use href="#i-check"/></svg>Palisades fire: $38,000 offered. $276,000 settled.</p>
-    <p class="micro"><span><svg class="ic ic-s"><use href="#i-check"/></svg>About a minute</span><span><svg class="ic ic-s"><use href="#i-check"/></svg>No upfront cost</span><span><svg class="ic ic-s"><use href="#i-check"/></svg>CA License 2B60428</span></p>
+    <p class="result"><svg class="ic ic-s" aria-hidden="true"><use href="#i-check"/></svg><span>Smoke damage: offered $17,000. Settled for <b>about $1.1 million.</b></span></p>
+    <p class="fine">Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</p>
+    <ul class="trust">
+     <li><svg class="ic ic-s sh" aria-hidden="true"><use href="#i-shield"/></svg><span>Licensed CA Public Adjuster No. 2B60428<br><a href="https://interactive.web.insurance.ca.gov/webuser/licw_name_search$.startup" target="_blank" rel="noopener">Verify</a></span></li>
+     <li><svg class="ic ic-s" aria-hidden="true"><use href="#i-check"/></svg><span>We represent the insured only</span></li>
+     <li><svg class="ic ic-s" aria-hidden="true"><use href="#i-check"/></svg><span>No upfront cost</span></li>
+     <li><svg class="ic ic-s" aria-hidden="true"><use href="#i-check"/></svg><span>You can cancel within 3 business days of signing</span></li>
+    </ul>
+   </div>
+
+   <div class="proof-col">
+    <figure class="photo r1610" style="margin:0">
+     <img src="/img/wood-house-720.webp" srcset="/img/wood-house-720.webp 720w, /img/wood-house-1200.webp 1200w" sizes="(min-width:900px) 600px, 100vw" width="720" height="540" alt="A house and car destroyed by fire, photographed on a site visit" decoding="async">
+     <figcaption class="cap">Every line of the estimate checked against what was built.</figcaption>
+    </figure>
+    <div class="mchip"><img src="/img/mike-176.webp" width="52" height="52" alt="Michael Rapport" loading="lazy" decoding="async"><p><b>Michael Rapport, Founding Principal</b><span>25 years building homes before he adjusted a claim.</span></p></div>
+    <div class="logos" data-slider>
+     <p class="lbl">Member and community</p>
+     <div class="ltrack">
+      <div class="lcard"><img src="/img/logo-pcapia.webp" width="198" height="96" alt="Pacific Coast Association of Public Insurance Adjusters" loading="lazy"></div>
+      <div class="lcard"><img src="/img/logo-capia.webp" width="149" height="96" alt="California Association of Public Insurance Adjusters" loading="lazy"></div>
+      <div class="lcard"><img src="/img/logo-up.webp" width="96" height="96" alt="United Policyholders, Proud Supporter 2023" loading="lazy"></div>
+      <!-- NAPIA: add when membership is approved. <div class="lcard"><img src="/img/logo-napia.webp" width="96" height="96" alt="National Association of Public Insurance Adjusters" loading="lazy"></div> -->
+     </div>
+     <div class="ldots" aria-hidden="true"></div>
+    </div>
+    <div class="cta">
+     <button type="button" class="btn js-start">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+     <small>Takes about a minute. No obligation.</small>
+     <a class="call-link" href="tel:+19165071005" data-call="hero"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call (916) 507-1005</a>
+    </div>
    </div>
   </div>
  </section>
 
  <section class="sec" aria-labelledby="res-h">
   <div class="wrap">
+   <p class="eb">Results</p>
    <h2 id="res-h">First offers we reopened.</h2>
-   <div class="swipe" tabindex="0" aria-label="Results, swipe for more">
-    <div class="res"><small>Palisades fire</small><p class="from">$38,000 offered</p><p class="to">$276,000 settled</p></div>
-    <div class="res"><small>Smoke damage</small><p class="from">$17,000 offered</p><p class="to">About $1.1 million</p></div>
-    <div class="res"><small>Estate fire</small><p class="from">$6 million recovered alone</p><p class="to">$11M + $5.2M contents</p></div>
+   <figure class="photo wide" style="margin:0">
+    <img src="/img/malibu-frame-720.webp" srcset="/img/malibu-frame-720.webp 720w, /img/malibu-frame-1200.webp 1200w" sizes="(min-width:1200px) 1160px, 100vw" width="720" height="540" alt="The burned frame of a coastal home after a fire" loading="lazy" decoding="async">
+    <span class="capchip">From our field files.</span>
+   </figure>
+   <div class="rescards">
+    <div class="res"><p class="lab"><span><svg class="ic"><use href="#i-search"/></svg></span>Smoke damage</p><p class="off">Offered <b>$17,000</b></p><p class="st">Settled</p><p class="to">About $1.1M</p><div class="bars" aria-hidden="true"><i style="--w:2%"></i><i style="--w:100%"></i></div></div>
+    <div class="res"><p class="lab"><span><svg class="ic"><use href="#i-building"/></svg></span>Estate fire</p><p class="off">Owner’s own recovery <b>$6 million</b></p><p class="st">Settled</p><p class="to">$11M <small>structure plus</small><br>$5.2M <small>contents</small></p></div>
+    <div class="res"><p class="lab"><span><svg class="ic"><use href="#i-home"/></svg></span>Los Angeles house fire</p><p class="off">Offered <b>$38,000</b></p><p class="st">Settled</p><p class="to">$276,000</p><div class="bars" aria-hidden="true"><i style="--w:14%"></i><i style="--w:100%"></i></div></div>
    </div>
-   <p class="fine">Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</p>
+   <p class="fine" style="margin-top:14px">Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</p>
+   <div class="cta ctarow" style="margin-top:22px">
+    <button type="button" class="btn js-start">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+    <small>Takes about a minute. No obligation.</small>
+    <a class="call-link" href="tel:+19165071005" data-call="results"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call (916) 507-1005</a>
+   </div>
   </div>
  </section>
 
- <section class="sec alt" aria-labelledby="how-h">
+ <section class="sec alt est" aria-labelledby="est-h">
   <div class="wrap two">
    <div>
+    <div class="marked">
+     <img src="/img/stair-detail-600.webp" srcset="/img/stair-detail-600.webp 600w, /img/stair-detail-900.webp 900w" sizes="(min-width:900px) 520px, 100vw" width="600" height="686" alt="A fire damaged stairway marked with the five items a first estimate often misses" loading="lazy" decoding="async">
+     <span class="pin" style="left:20.1%;top:18.8%"><b>1</b></span><span class="pin" style="left:12.6%;top:61.3%"><b>2</b></span><span class="pin" style="left:62.9%;top:67.6%"><b>3</b></span><span class="pin" style="left:83.5%;top:21.3%"><b>4</b></span><span class="pin" style="left:45.8%;top:90.1%"><b>5</b></span>
+    </div>
+    <p class="dim">Measured, not estimated</p>
+   </div>
+   <div>
+    <p class="eb">Line by line</p>
+    <h2 id="est-h">What the first estimate misses.</h2>
+    <p class="lead">The carrier writes the first estimate. A builder reads it line by line.</p>
+    <ol class="missed">
+     <li><span>1</span>Smoke inside the walls and the duct work, not only on the paint.</li>
+     <li><span>2</span>Code upgrades the city requires before it signs off the rebuild.</li>
+     <li><span>3</span>Wet subfloor and framing under the flooring, found with moisture mapping.</li>
+     <li><span>4</span>Contents priced at today’s replacement cost, item by item.</li>
+     <li><span>5</span>Recoverable depreciation you can claim back once the work is done.</li>
+    </ol>
+    <div class="cta">
+     <button type="button" class="btn js-start">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+     <small>Takes about a minute. No obligation.</small>
+    </div>
+   </div>
+  </div>
+ </section>
+
+ <section class="sec soft" aria-labelledby="how-h">
+  <div class="wrap two">
+   <div>
+    <p class="eb">How it works</p>
     <h2 id="how-h">What happens next.</h2>
     <ol class="steps">
-     <li><span><b>Answer 4 questions</b>About a minute.</span></li>
-     <li><span><b>We read your claim</b>Policy, estimate and every letter the insurer sent.</span></li>
-     <li><span><b>You decide</b>We tell you what we’d claim and what we’d charge. No pressure.</span></li>
+     <li><span><b>Answer 4 questions.</b>About a minute.</span></li>
+     <li><span><b>We read your claim.</b>Policy, estimate and every letter the insurer sent.</span></li>
+     <li><span><b>You decide.</b>We tell you what we’d claim and what we’d charge. No pressure.</span></li>
     </ol>
    </div>
-   <div class="card mike" style="margin-top:24px">
-    <img src="/img/mike-176.webp" width="88" height="88" alt="Michael Rapport, Founding Principal" loading="lazy" decoding="async">
-    <p><b>Michael Rapport</b>Built homes for 25 years before he adjusted a single claim. Reads your estimate the way a contractor bids it.<span class="lic2">Founding Principal. CA DOI License No. 2B60428.</span></p>
+   <div class="founder">
+    <svg class="ic qt" aria-hidden="true"><use href="#i-quote"/></svg>
+    <div class="id"><img src="/img/mike-176.webp" width="96" height="96" alt="Michael Rapport, Founding Principal" loading="lazy" decoding="async"><p><b>Michael Rapport</b><span>Founding Principal</span></p></div>
+    <p>Built homes for 25 years before he adjusted a single claim. Reads your estimate the way a contractor bids it.</p>
+    <p class="lic2"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>Founding Principal. CA DOI License No. 2B60428.</p>
    </div>
   </div>
  </section>
 
  <section class="sec faq" aria-labelledby="faq-h">
-  <div class="wrap two">
+  <div class="wrap">
+   <p class="eb">Your questions</p>
    <h2 id="faq-h">Before you call.</h2>
-   <div>
-    <details open><summary>I already cashed a check. Is it too late?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.</p></details>
-    <details><summary>What does it cost?<svg class="ic"><use href="#i-chev"/></svg></summary><p>No upfront cost. We’re paid a percentage of what we recover, agreed in writing first.</p></details>
-    <details><summary>Do I still pick my own contractor?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Yes. We don’t arrange repairs. We price the work your contractor will do.</p></details>
-    <details><summary>My adjuster keeps changing.<svg class="ic"><use href="#i-chev"/></svg></summary><p>Then the next one starts from our file. Every letter, call and photo in one place.</p></details>
+   <div class="two">
+    <div>
+     <div class="vet">
+      <svg class="ic doc" aria-hidden="true"><use href="#i-doc"/></svg>
+      <h3>Check any public adjuster in two minutes.</h3>
+      <ul>
+       <li><span><svg class="ic"><use href="#i-check"/></svg></span>Look up the license on the California Department of Insurance site. Ours is 2B60428.</li>
+       <li><span><svg class="ic"><use href="#i-check"/></svg></span>Read the fee in the contract before you sign. California requires it in writing.</li>
+       <li><span><svg class="ic"><use href="#i-check"/></svg></span>You can cancel within 3 business days of signing.</li>
+       <li><span><svg class="ic"><use href="#i-check"/></svg></span>Ask who handles your claim. You should be able to name them.</li>
+      </ul>
+     </div>
+     <div class="cta vetcta">
+      <button type="button" class="btn js-start">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+      <small>Takes about a minute. No obligation.</small>
+      <a class="call-link" href="tel:+19165071005" data-call="faq"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call (916) 507-1005</a>
+     </div>
+    </div>
+    <div>
+     <details open><summary>How do I know you’re legitimate?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Check our license, 2B60428, on the California Department of Insurance website. Our fee and your right to cancel are written into the contract before any work starts.</p></details>
+     <details><summary>Will this slow my claim down?<svg class="ic"><use href="#i-chev"/></svg></summary><p>We have a strong financial incentive to expedite settlement on your behalf.</p></details>
+     <details><summary>Will my insurer hold it against me?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Carriers work with public adjusters every day. The difference is what gets measured.</p></details>
+     <details><summary>What does it cost?<svg class="ic"><use href="#i-chev"/></svg></summary><p>No upfront cost. We’re paid a percentage of what we recover, agreed in writing first.</p></details>
+     <details><summary>I already cashed a check. Is it too late?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.</p></details>
+     <details><summary>Do I still pick my own contractor?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Yes. We don’t arrange repairs. We price the work your contractor will do.</p></details>
+     <details><summary>My adjuster keeps changing.<svg class="ic"><use href="#i-chev"/></svg></summary><p>We keep the full file, every letter and every estimate, so a new adjuster on their side starts from our record, not from zero.</p></details>
+    </div>
    </div>
   </div>
  </section>
 
- <section class="sec final" aria-labelledby="fin-h">
+ <section class="band" aria-labelledby="band-h">
   <div class="wrap">
-   <h2 id="fin-h">Start with what happened.</h2>
-   <div class="tiles">
-    <button type="button" class="tile" data-loss="fire"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-flame"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Fire</b></button>
-    <button type="button" class="tile" data-loss="smoke"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-smoke"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Smoke damage</b></button>
-    <button type="button" class="tile" data-loss="water"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-drop"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Water or a leak</b></button>
-    <button type="button" class="tile" data-loss="denied"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-doc"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Claim denied</b></button>
+   <div>
+    <h2 id="band-h">Call before the carrier sets the narrative.</h2>
+    <p style="margin-top:12px">Your insurance company has an adjuster protecting their interests. You have the right to one too.</p>
    </div>
-   <p class="note">No upfront cost. We’re paid a percentage of what we recover.</p>
+   <div class="btns">
+    <button type="button" class="btn light js-start">Start my free review</button>
+    <a class="btn outline" href="tel:+19165071005" data-call="band"><svg class="ic"><use href="#i-phone"/></svg>Call (916) 507-1005</a>
+    <small>Monday to Friday, 9 AM to 5 PM Pacific.</small>
+   </div>
+  </div>
+ </section>
+
+ <section class="sec contact alt" id="contact" aria-labelledby="ct-h">
+  <div class="wrap">
+   <div>
+    <p class="eb">Prefer to write</p>
+    <h2 id="ct-h">Send us the details. We call you back.</h2>
+    <p class="lead">Tell us what happened and where the claim stands. A licensed public adjuster reads it and calls you during office hours.</p>
+    <div class="mchip" style="margin-bottom:18px"><img src="/img/mike-176.webp" width="52" height="52" alt="Michael Rapport" loading="lazy" decoding="async"><p><b>Michael Rapport, Founding Principal</b><span>CA DOI License No. 2B60428</span></p></div>
+    <div class="logos" data-slider style="margin-bottom:18px">
+     <p class="lbl">Member and community</p>
+     <div class="ltrack">
+      <div class="lcard"><img src="/img/logo-pcapia.webp" width="198" height="96" alt="Pacific Coast Association of Public Insurance Adjusters" loading="lazy"></div>
+      <div class="lcard"><img src="/img/logo-capia.webp" width="149" height="96" alt="California Association of Public Insurance Adjusters" loading="lazy"></div>
+      <div class="lcard"><img src="/img/logo-up.webp" width="96" height="96" alt="United Policyholders, Proud Supporter 2023" loading="lazy"></div>
+     </div>
+     <div class="ldots" aria-hidden="true"></div>
+    </div>
+    <p class="callrow"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg>Rather talk now? Call <a href="tel:+19165071005" data-call="contact">(916) 507-1005</a></p>
+    <p class="hours">Monday to Friday, 9 AM to 5 PM Pacific</p>
+   </div>
+   <div class="form" id="cform-wrap">
+    <p class="fhead"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>Free review. A licensed adjuster reads every form.</p>
+    <form id="cform" novalidate>
+     <div class="formerr" id="cformerr" role="alert"></div>
+     <div class="field" data-cf="name"><label for="c-name">Full name</label><input id="c-name" name="name" autocomplete="name" autocapitalize="words" placeholder="First and last name" required><span class="err">Please enter your name.</span></div>
+     <div class="field" data-cf="phone"><label for="c-phone">Mobile number</label><input id="c-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(916) 555 0100" required><span class="help">So a licensed adjuster can call you about this claim.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
+     <div class="field" data-cf="email"><label for="c-email">Email (optional)</label><input id="c-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@email.com"><span class="help">For a written summary of what we find.</span><span class="err">Please check the email address.</span></div>
+     <div class="field" data-cf="zip"><label for="c-zip">Property ZIP code</label><input id="c-zip" name="zip" inputmode="numeric" autocomplete="postal-code" maxlength="5" placeholder="95811" required><span class="err">Please enter a 5 digit ZIP code.</span></div>
+     <div class="field"><label for="c-loss">What happened</label><select id="c-loss" name="loss_type"><option value="fire">Fire</option><option value="smoke">Smoke damage</option><option value="water">Water or a leak</option><option value="denied">Claim denied</option><option value="other">Something else</option></select></div>
+     <div class="field"><label for="c-status">Where the claim stands (optional)</label><select id="c-status" name="claim_status"><option value="">Choose one</option><option value="not_filed">Haven’t filed yet</option><option value="waiting">Filed, still waiting</option><option value="low_offer">Got an offer, it looks low</option><option value="denied">Denied, in full or in part</option></select></div>
+     <div class="field"><label for="c-notes">Anything we should know (optional)</label><textarea id="c-notes" name="notes" maxlength="1000" placeholder="Dates, letters, what was damaged"></textarea></div>
+     <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
+     <p class="consent">By tapping Send my claim details, you agree Blue Star Adjusters may call or text you<span id="c-echo"></span> about this claim, including by automated means. Consent isn’t a condition of service. Message and data rates may apply. We don’t sell or share your details. <a href="/privacy">Privacy</a>.</p>
+     <button class="btn block" type="submit" id="c-submit">Send my claim details<svg class="ic"><use href="#i-arrow"/></svg></button>
+     <p class="fnote">No upfront cost. We’re paid a percentage of what we recover.</p>
+    </form>
+    <div class="sent" role="status">
+     <div class="done-ic" style="margin:0 auto"><svg class="ic" style="width:28px;height:28px"><use href="#i-check"/></svg></div>
+     <h3>Got it<span id="c-fname"></span>.</h3>
+     <p>A licensed public adjuster reads your details and calls you from (916) 507-1005 during office hours, Monday to Friday, 9 AM to 5 PM Pacific.</p>
+     <a class="save" href="tel:+19165071005" data-call="contact-sent"><svg class="ic"><use href="#i-phone"/></svg>Call us now: (916) 507-1005</a>
+    </div>
+   </div>
   </div>
  </section>
 </main>
@@ -356,14 +645,18 @@ body.funnel #landing{display:none}
 </div>
 
 <div class="sticky" id="sticky">
- <a class="btn ghost" href="tel:+19165071005" data-call="sticky"><svg class="ic" style="width:18px;height:18px"><use href="#i-phone"/></svg>Call</a>
+ <a class="btn ghost" href="tel:+19165071005" data-call="sticky"><svg class="ic"><use href="#i-phone"/></svg>Call</a>
  <button class="btn grow" type="button" id="sticky-start">Start my free review</button>
 </div>
 
 <footer>
  <div class="wrap">
-  <p>Blue Star Adjusters. 1610 R Street, Suite 300, Sacramento, California 95811. CA DOI License No. 2B60428. We represent the insured only. No upfront cost. We’re paid a percentage of what we recover.</p>
-  <p>Results reflect specific losses and policies. Past results don’t guarantee a similar outcome. Office hours: Monday to Friday, 9 AM to 5 PM Pacific. <a href="/privacy">Privacy</a></p>
+  <div class="cols">
+   <div><h3>Blue Star Adjusters</h3><p>1610 R Street, Suite 300, Sacramento, California 95811</p><p>CA DOI License No. 2B60428</p><p><a href="tel:+19165071005" data-call="footer">(916) 507-1005</a></p></div>
+   <div><h3>How we work</h3><p>We represent the insured only.</p><p>No upfront cost. We’re paid a percentage of what we recover.</p><p>Office hours: Monday to Friday, 9 AM to 5 PM Pacific.</p></div>
+   <div><h3>Results</h3><p>Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</p></div>
+  </div>
+  <div class="legal"><span>Blue Star Adjusters. Sacramento, California.</span><a href="/privacy">Privacy</a></div>
  </div>
 </footer>
 </body>

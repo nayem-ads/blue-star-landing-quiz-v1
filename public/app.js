@@ -86,10 +86,100 @@
   if ('IntersectionObserver' in w && quiz) {
     new IntersectionObserver(function (en) { sticky.classList.toggle('show', !en[0].isIntersecting && en[0].boundingClientRect.top < 0); }).observe(quiz);
   }
-  d.getElementById('sticky-start').addEventListener('click', function () {
+  function goQuiz() {
     w.scrollTo({ top: 0, behavior: 'smooth' });
     var first = quiz.querySelector('.tile'); if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 400);
+  }
+  d.getElementById('sticky-start').addEventListener('click', goQuiz);
+  var starts = d.querySelectorAll('.js-start');
+  for (var si = 0; si < starts.length; si++) starts[si].addEventListener('click', goQuiz);
+
+  // Progress bar fills on load.
+  var bar1 = d.getElementById('bar1');
+  if (bar1) setTimeout(function () { bar1.style.width = '25%'; }, 350);
+
+  // Results bars grow when they scroll into view.
+  var barSets = d.querySelectorAll('.bars');
+  if ('IntersectionObserver' in w) {
+    var bo = new IntersectionObserver(function (en) { en.forEach(function (x) { if (x.isIntersecting) { x.target.classList.add('in'); bo.unobserve(x.target); } }); }, { threshold: 0.4 });
+    for (var bi = 0; bi < barSets.length; bi++) bo.observe(barSets[bi]);
+  } else { for (var bj = 0; bj < barSets.length; bj++) barSets[bj].classList.add('in'); }
+
+  // Logo slider: swipe on mobile, dots, gentle auto-advance every 3s. Static row on desktop.
+  var sliders = d.querySelectorAll('[data-slider]');
+  var still = w.matchMedia && w.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  Array.prototype.forEach.call(sliders, function (sl) {
+    var tr = sl.querySelector('.ltrack'), dots = sl.querySelector('.ldots'), cards = tr.children;
+    function pages() { var vis = Math.max(1, Math.round(tr.clientWidth / (cards[0].offsetWidth || 1))); return Math.max(1, cards.length - vis + 1); }
+    function draw() {
+      var n = pages(); dots.textContent = '';
+      if (n < 2) return;
+      var idx = Math.round(tr.scrollLeft / ((cards[0].offsetWidth || 1) + 8));
+      for (var i = 0; i < n; i++) { var e = d.createElement('i'); if (i === Math.min(idx, n - 1)) e.className = 'on'; dots.appendChild(e); }
+    }
+    draw(); tr.addEventListener('scroll', function () { w.requestAnimationFrame(draw); }, { passive: true }); w.addEventListener('resize', draw);
+    var paused = false;
+    tr.addEventListener('touchstart', function () { paused = true; }, { passive: true });
+    tr.addEventListener('mouseenter', function () { paused = true; });
+    if (!still) setInterval(function () {
+      if (paused || pages() < 2 || d.hidden) return;
+      var step = (cards[0].offsetWidth || 0) + 8, max = tr.scrollWidth - tr.clientWidth;
+      tr.scrollTo({ left: tr.scrollLeft + step > max + 2 ? 0 : tr.scrollLeft + step, behavior: 'smooth' });
+    }, 3000);
   });
+
+  // Contact form (bottom of page). Same /api/lead endpoint; counts as a lead like the quiz.
+  var pageT0 = Date.now();
+  var cform = d.getElementById('cform');
+  if (cform) {
+    var cwrap = d.getElementById('cform-wrap'), cbtn = d.getElementById('c-submit'), cerr = d.getElementById('cformerr'), cphone = d.getElementById('c-phone'), czip = d.getElementById('c-zip'), cecho = d.getElementById('c-echo');
+    var fmt = function (x) { return x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x; };
+    cphone.addEventListener('input', function () {
+      var x = cphone.value.replace(/\D/g, ''); if (x.length === 11 && x[0] === '1') x = x.slice(1); x = x.slice(0, 10);
+      cphone.value = fmt(x); cecho.textContent = x.length === 10 ? ' at ' + cphone.value : '';
+    });
+    czip.addEventListener('input', function () { czip.value = czip.value.replace(/\D/g, '').slice(0, 5); });
+    var cErr = function (n, on) { var f = cform.querySelector('.field[data-cf="' + n + '"]'); if (f) f.classList.toggle('bad', !!on); };
+    var cCheck = function (n) {
+      var v = (cform[n].value || '').trim(), ok = true;
+      if (n === 'name') ok = v.length >= 2 && /[a-z]/i.test(v);
+      if (n === 'phone') { var p = v.replace(/\D/g, ''); if (p.length === 11 && p[0] === '1') p = p.slice(1); ok = p.length === 10 && !/^[01]/.test(p); }
+      if (n === 'zip') ok = /^\d{5}$/.test(v);
+      if (n === 'email') ok = !v || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+      cErr(n, !ok); return ok;
+    };
+    ['name', 'phone', 'email', 'zip'].forEach(function (n) {
+      cform[n].addEventListener('blur', function () { if (cform[n].value) cCheck(n); });
+      cform[n].addEventListener('input', function () { cErr(n, false); });
+    });
+    cform.addEventListener('submit', function (e) {
+      e.preventDefault(); cerr.classList.remove('show');
+      var okAll = ['name', 'phone', 'email', 'zip'].map(cCheck).every(Boolean);
+      if (!okAll) { var bad = cform.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
+      cbtn.disabled = true; var label = cbtn.innerHTML; cbtn.textContent = 'Sending';
+      var payload = {
+        source: 'contact', loss_type: cform.loss_type.value, claim_status: cform.claim_status.value || null,
+        name: cform.name.value, phone: cform.phone.value, zip: cform.zip.value, email: cform.email.value, notes: cform.notes.value, company: cform.company.value,
+        elapsed_ms: Date.now() - pageT0, page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
+      };
+      for (var k in state.track) payload[k] = state.track[k];
+      fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (j && j.ok) {
+            dl('generate_lead', { lead_id: j.id, loss_type: payload.loss_type, claim_status: payload.claim_status || '', form: 'contact' });
+            d.getElementById('c-fname').textContent = j.first_name ? ', ' + j.first_name : '';
+            cwrap.classList.add('ok');
+          } else if (j && j.errors) { Object.keys(j.errors).forEach(function (k) { cErr(k, true); }); }
+          else throw new Error((j && j.error) || 'error');
+        })
+        .catch(function (err) {
+          cerr.textContent = (err && err.message && err.message !== 'error' && err.message.indexOf('Failed') === -1) ? err.message : 'We couldn’t send that. Please try again or call (916) 507-1005.';
+          cerr.classList.add('show');
+        })
+        .finally(function () { cbtn.disabled = false; cbtn.innerHTML = label; });
+    });
+  }
 
   function renderAnswers() {
     var a = d.getElementById('answers'); a.textContent = '';

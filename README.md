@@ -43,6 +43,7 @@ If an email fails, the lead is still saved. Each row records `email_status` and 
   - Each answer moves to the next step on its own.
   - The phone's Back button works step by step.
   - Answers survive a page reload.
+- **Contact form (bottom of page, id `contact`):** name, mobile, optional email, ZIP, what happened, optional claim status and message. Posts to the same `/api/lead` with `source: contact`, is saved with `source`, `email` and `notes` columns (added automatically on start), emails you, and fires the same `generate_lead` event (with `form: contact`) and Meta `Lead`.
 - **Thank-you screen:** shows call times for the next 3 business days, 9 AM to 5 PM Pacific only. The time they pick is saved and emailed.
 - **Ad matching:** the headline changes with `?loss=fire`, `?loss=smoke`, `?loss=water` or `?loss=denied`. Use these as the final URLs for each ad group.
 - **Tracking:**

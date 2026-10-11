@@ -33,11 +33,16 @@ CREATE TABLE IF NOT EXISTS leads (
   email_error   TEXT
 );
 CREATE INDEX IF NOT EXISTS leads_created_at_idx ON leads (created_at DESC);
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS source TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE leads ALTER COLUMN claim_status DROP NOT NULL;
+ALTER TABLE leads ALTER COLUMN loss_timing DROP NOT NULL;
 `;
 
 const COLS = ['public_id','loss_type','claim_status','loss_timing','name','phone','zip','page_variant',
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid',
-  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam'];
+  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam','source','email','notes'];
 
 async function init() {
   if (!process.env.DATABASE_URL) {

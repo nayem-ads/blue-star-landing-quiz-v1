@@ -52,7 +52,7 @@ function page(req) {
   const key = String(req.query.loss || req.query.h || '').toLowerCase();
   const variant = HEADLINES[key] ? key : 'default';
   return TEMPLATE
-    .replaceAll('{{H1}}', HEADLINES[variant])
+    .replaceAll('{{H1}}', HEADLINES[variant].replace('too low.', '<span class="hl">too low.</span>'))
     .replaceAll('{{VARIANT}}', variant)
     .replaceAll('{{GTM_HEAD}}', gtmHead)
     .replaceAll('{{GTM_BODY}}', gtmBody)
@@ -147,7 +147,7 @@ app.get('/admin/leads.csv', async (req, res) => {
   const key = process.env.ADMIN_KEY;
   if (!key || req.query.key !== key) return res.status(404).send('Not found');
   const rows = await db.listLeads();
-  const cols = ['created_at', 'name', 'phone', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'is_spam', 'public_id'];
+  const cols = ['created_at', 'name', 'phone', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'is_spam', 'public_id'];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="bluestar-leads.csv"', 'Cache-Control': 'no-store' });
   res.send([cols.join(','), ...rows.map(r => cols.map(c => q(r[c] instanceof Date ? r[c].toISOString() : r[c])).join(','))].join('\n'));

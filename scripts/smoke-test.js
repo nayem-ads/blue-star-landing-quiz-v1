@@ -33,6 +33,11 @@ const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6'
   r = await post('/api/lead', { ...good, name: 'Bot Honey', company: 'x' }, { 'X-Real-IP': '10.0.0.4' });
   ok(r.ok, 'honeypot bot gets a quiet ok');
 
+  r = await post('/api/lead', { source: 'contact', loss_type: 'water', name: 'Contact Form', phone: '(916) 555-0166', zip: '94110', email: 'test@example.com', notes: 'Ceiling leak', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.5' });
+  j = await r.json(); ok(r.ok && j.ok, 'contact form lead saved (no claim status or timing)');
+  r = await post('/api/lead', { source: 'contact', loss_type: 'water', name: 'Bad Email', phone: '(916) 555-0167', zip: '94110', email: 'nope', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.6' });
+  j = await r.json(); ok(r.status === 400 && j.errors.email, 'contact form bad email rejected');
+
   let last; for (let i = 0; i < 7; i++) last = await post('/api/lead', good, { 'X-Real-IP': '10.0.0.9' });
   ok(last.status === 429, 'rate limit after 6 per 10 minutes');
 
