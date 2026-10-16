@@ -33,7 +33,9 @@ const HEADLINES = {
   water: 'Your water damage claim came back low. Get a free second opinion.',
   denied: 'Your claim was denied. That isn’t always the final answer.',
 };
-const TEMPLATE = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
+// app.js is versioned by content hash so a deploy can never pair new HTML with a cached old script.
+const APP_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'app.js'))).digest('hex').slice(0, 10);
+const TEMPLATE = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8').replace('src="/app.js"', `src="/app.js?v=${APP_V}"`);
 const GTM = (process.env.GTM_ID || 'GTM-5246KXDV').trim();
 const gtmHead = /^GTM-[A-Z0-9]+$/.test(GTM)
   ? `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${GTM}');</script>`
@@ -87,13 +89,17 @@ function limited(ip) {
   return arr.length > 6;
 }
 
-app.post('/api/lead', express.json({ limit: '16kb' }), async (req, res) => {
+app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ extended: false, limit: '16kb' }), async (req, res) => {
   const b = req.body || {};
+  // Plain form post means the page script didn't run: answer with a page, not JSON.
+  const plain = !req.is('application/json');
+  if (plain && !b.source) b.source = 'contact';
+  const reply = (code, json) => plain ? res.redirect(303, json.ok ? '/thanks' : '/#contact') : res.status(code).json(json);
   const ip = clientIp(req);
-  if (limited(ip)) return res.status(429).json({ ok: false, error: 'Too many attempts. Please call (916) 507-1005.' });
+  if (limited(ip)) return reply(429, { ok: false, error: 'Too many attempts. Please call (916) 507-1005.' });
 
   const { ok, errors, lead } = validateLead(b);
-  if (!ok) return res.status(400).json({ ok: false, errors });
+  if (!ok) return reply(400, { ok: false, errors });
 
   // Bots: hidden honeypot field filled, or the whole quiz done in under 3 seconds.
   const spam = Boolean(b.company) || (Number(b.elapsed_ms) > 0 && Number(b.elapsed_ms) < 3000);
@@ -103,7 +109,7 @@ app.post('/api/lead', express.json({ limit: '16kb' }), async (req, res) => {
 
   if (!spam) {
     const dup = await db.findRecent(lead.phone).catch(() => null);
-    if (dup) return res.json({ ok: true, id: dup, first_name: lead.name.split(' ')[0], duplicate: true });
+    if (dup) return reply(200, { ok: true, id: dup, first_name: lead.name.split(' ')[0], duplicate: true });
   }
 
   let saved;
@@ -123,7 +129,7 @@ app.post('/api/lead', express.json({ limit: '16kb' }), async (req, res) => {
       await db.setEmailStatus(saved.public_id, 'failed', e.message).catch(() => {});
     }
   }
-  res.json({ ok: true, id: saved.public_id, first_name: lead.name.split(' ')[0] });
+  reply(200, { ok: true, id: saved.public_id, first_name: lead.name.split(' ')[0] });
 });
 
 app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, res) => {

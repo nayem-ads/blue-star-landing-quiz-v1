@@ -19,7 +19,7 @@ const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6'
   r = await fetch(BASE + '/fonts/sg-700.woff2'); ok(r.ok && /immutable/.test(r.headers.get('cache-control')), 'fonts cached immutable');
 
   r = await post('/api/lead', { ...good, phone: '123', zip: '9', name: '' }, { 'X-Real-IP': '10.0.0.1' });
-  let j = await r.json(); ok(r.status === 400 && j.errors.phone && j.errors.zip && j.errors.name, 'invalid fields rejected');
+  let j = await r.json(); ok(r.status === 400 && j.errors.phone && j.errors.name && !j.errors.zip, 'invalid fields rejected (ZIP no longer required)');
 
   r = await post('/api/lead', good, { 'X-Real-IP': '10.0.0.2' });
   j = await r.json(); ok(r.ok && j.ok && /^[0-9a-f-]{36}$/.test(j.id) && j.first_name === 'Test', 'valid lead saved ' + j.id);
@@ -39,8 +39,12 @@ const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6'
   j = await r.json(); ok(r.status === 400 && j.errors.email, 'contact form bad email rejected');
   r = await post('/api/lead', { source: 'contact', loss_type: 'fire', name: 'No Address', phone: '(916) 555-0168', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.7' });
   j = await r.json(); ok(r.ok && j.ok, 'contact form lead saved with no ZIP, no address, no email');
-  r = await post('/api/lead', { ...good, zip: '' }, { 'X-Real-IP': '10.0.0.8' });
-  j = await r.json(); ok(r.status === 400 && j.errors.zip, 'quiz still requires ZIP');
+  r = await post('/api/lead', { ...good, name: 'Quiz Address', phone: '(916) 555-0170', zip: '', address: '1 Main St, Oakland 94607' }, { 'X-Real-IP': '10.0.0.8' });
+  j = await r.json(); ok(r.ok && j.ok, 'quiz lead saved with address and no ZIP');
+  r = await fetch(`${BASE}/api/lead`, { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Real-IP': '10.0.0.10' }, body: 'name=No+Script&phone=9165550171&loss_type=fire&elapsed_ms=30000' });
+  ok(r.status === 303 && r.headers.get('location') === '/thanks', 'plain form post lands on /thanks');
+  r = await fetch(`${BASE}/thanks`); ok(r.ok && (await r.text()).includes('Got it'), 'thanks page renders');
+  r = await fetch(`${BASE}/`); const html = await r.text(); ok(/src="\/app\.js\?v=[0-9a-f]{10}"/.test(html) && /method="post"/.test(html), 'app.js is versioned and forms post');
 
   let last; for (let i = 0; i < 7; i++) last = await post('/api/lead', good, { 'X-Real-IP': '10.0.0.9' });
   ok(last.status === 429, 'rate limit after 6 per 10 minutes');

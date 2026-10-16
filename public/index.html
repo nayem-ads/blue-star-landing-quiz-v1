@@ -559,7 +559,7 @@ body.funnel #landing{display:none}
    </div>
    <div class="form" id="cform-wrap">
     <p class="fhead"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>Free review. A licensed adjuster reads every form.</p>
-    <form id="cform" novalidate>
+    <form id="cform" method="post" action="/api/lead" novalidate>
      <div class="formerr" id="cformerr" role="alert"></div>
      <div class="field" data-cf="name"><label for="c-name">Full name</label><input id="c-name" name="name" autocomplete="name" autocapitalize="words" placeholder="First and last name" required><span class="err">Please enter your name.</span></div>
      <div class="field" data-cf="phone"><label for="c-phone">Mobile number</label><input id="c-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(916) 555 0100" required><span class="help">So a licensed adjuster can call you about this claim.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
@@ -613,11 +613,11 @@ body.funnel #landing{display:none}
   <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 4 of 4</span><span>Last step</span></div><div class="bar"><i style="width:100%"></i></div></div>
   <h2 id="q4" tabindex="-1">Last step. Where should we call you?</h2>
   <div class="answers" id="answers"></div>
-  <form id="lead" novalidate>
+  <form id="lead" method="post" action="/api/lead" novalidate>
    <div class="formerr" id="formerr" role="alert"></div>
    <div class="field" data-f="name"><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="First and last name" required><span class="err">Please enter your name.</span></div>
    <div class="field" data-f="phone"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" enterkeyhint="next" placeholder="(415) 555 0142" required><span class="help">A licensed adjuster calls about this claim only.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
-   <div class="field" data-f="zip"><label for="f-zip">Property ZIP code</label><input id="f-zip" name="zip" inputmode="numeric" autocomplete="postal-code" enterkeyhint="send" maxlength="5" pattern="[0-9]{5}" placeholder="94110" required><span class="err">Please enter a 5 digit ZIP code.</span></div>
+   <div class="field" data-f="address"><label for="f-address">Property address (optional)</label><input id="f-address" name="address" type="text" autocomplete="street-address" enterkeyhint="send" placeholder="Street, city"><span class="help">Helps us look up the property before we call.</span></div>
    <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
    <button class="btn block" type="submit" id="submit">Get my free review</button>
    <p class="consent">By tapping, you agree Blue Star Adjusters may call or text you about this claim, including by automated means. Consent isn’t a condition of service. Message and data rates may apply. We don’t sell or share your details. <a href="/privacy">Privacy</a>.</p>

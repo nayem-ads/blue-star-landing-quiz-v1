@@ -39,7 +39,7 @@ Resend is more reliable for server-side sending. If FormSubmit ever refuses, swi
 If an email fails, the lead is still saved. Each row records `email_status` and `email_error`.
 
 ## What it does
-- **Quiz:** loss type, then claim status, then date of loss, then name, mobile and ZIP, then a thank-you screen.
+- **Quiz:** loss type, then claim status, then date of loss, then name, mobile and an optional property address, then a thank-you screen. If the page script ever fails, both forms still POST to /api/lead and land on /thanks (no personal data in the URL).
   - Each answer moves to the next step on its own.
   - The phone's Back button works step by step.
   - Answers survive a page reload.

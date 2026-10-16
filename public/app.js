@@ -138,7 +138,7 @@
   // Contact form (bottom of page). Same /api/lead endpoint; counts as a lead like the quiz.
   var pageT0 = Date.now();
   var cform = d.getElementById('cform');
-  if (cform) {
+  if (cform) try {
     var cwrap = d.getElementById('cform-wrap'), cbtn = d.getElementById('c-submit'), cerr = d.getElementById('cformerr'), cphone = d.getElementById('c-phone'), cecho = d.getElementById('c-echo');
     var fmt = function (x) { return x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x; };
     cphone.addEventListener('input', function () {
@@ -184,7 +184,7 @@
         })
         .finally(function () { cbtn.disabled = false; cbtn.innerHTML = label; });
     });
-  }
+  } catch (e) { if (w.console) console.error('contact form init', e); }
 
   function renderAnswers() {
     var a = d.getElementById('answers'); a.textContent = '';
@@ -201,11 +201,9 @@
     x = x.slice(0, 10);
     phone.value = x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x;
   });
-  var zip = d.getElementById('f-zip');
-  zip.addEventListener('input', function () { zip.value = zip.value.replace(/\D/g, '').slice(0, 5); });
 
   function fieldErr(name, on) { var f = d.querySelector('.field[data-f="' + name + '"]'); if (f) f.classList.toggle('bad', !!on); }
-  ['f-name', 'f-phone', 'f-zip'].forEach(function (id) {
+  ['f-name', 'f-phone'].forEach(function (id) {
     d.getElementById(id).addEventListener('blur', function (e) { if (e.target.value) check(e.target.name); });
     d.getElementById(id).addEventListener('input', function (e) { fieldErr(e.target.name, false); });
   });
@@ -213,7 +211,6 @@
     var v = d.getElementById('f-' + name).value.trim(), ok = true;
     if (name === 'name') ok = v.length >= 2 && /[a-z]/i.test(v);
     if (name === 'phone') { var p = v.replace(/\D/g, ''); if (p.length === 11 && p[0] === '1') p = p.slice(1); ok = p.length === 10 && !/^[01]/.test(p); }
-    if (name === 'zip') ok = /^\d{5}$/.test(v);
     fieldErr(name, !ok); return ok;
   }
 
@@ -221,12 +218,12 @@
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     ferr.classList.remove('show');
-    var okAll = ['name', 'phone', 'zip'].map(check).every(Boolean);
+    var okAll = ['name', 'phone'].map(check).every(Boolean);
     if (!okAll) { var bad = form.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
     btn.disabled = true; btn.textContent = 'Sending';
     var payload = {
       loss_type: state.loss_type, claim_status: state.claim_status, loss_timing: state.loss_timing,
-      name: form.name.value, phone: form.phone.value, zip: form.zip.value, company: form.company.value,
+      name: form.name.value, phone: form.phone.value, address: form.address.value, company: form.company.value,
       elapsed_ms: state.t0 ? Date.now() - state.t0 : null, page_variant: body.dataset.variant,
       landing_url: state.landing_url, referrer: state.referrer
     };
