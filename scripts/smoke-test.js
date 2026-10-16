@@ -4,7 +4,7 @@ const KEY = process.env.ADMIN_KEY || '';
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('PASS', m); } else { fail++; console.log('FAIL', m); } };
 const post = (p, b, h = {}) => fetch(BASE + p, { method: 'POST', headers: { 'Content-Type': 'application/json', ...h }, body: JSON.stringify(b) });
-const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6', name: 'Test Lead', phone: '(916) 555-0199', zip: '95811', elapsed_ms: 42000, utm_source: 'google', utm_campaign: 'fire-test', gclid: 'TEST123', page_variant: 'fire' };
+const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6', name: 'Test Lead', phone: '(916) 555-0199', zip: '95811', address: '1610 R St, Sacramento, CA 95811', elapsed_ms: 42000, utm_source: 'google', utm_campaign: 'fire-test', gclid: 'TEST123', page_variant: 'fire' };
 
 (async () => {
   let r = await fetch(BASE + '/');
@@ -35,15 +35,25 @@ const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6'
 
   r = await post('/api/lead', { source: 'contact', loss_type: 'water', name: 'Contact Form', phone: '(916) 555-0166', address: '1610 R St, Sacramento 95811', email: 'test@example.com', notes: 'Ceiling leak', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.5' });
   j = await r.json(); ok(r.ok && j.ok, 'contact form lead saved (no claim status or timing)');
-  r = await post('/api/lead', { source: 'contact', loss_type: 'water', name: 'Bad Email', phone: '(916) 555-0167', email: 'nope', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.6' });
+  r = await post('/api/lead', { source: 'contact', loss_type: 'water', name: 'Bad Email', phone: '(916) 555-0167', address: '2 Oak Ave, Davis 95616', email: 'nope', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.6' });
   j = await r.json(); ok(r.status === 400 && j.errors.email, 'contact form bad email rejected');
   r = await post('/api/lead', { source: 'contact', loss_type: 'fire', name: 'No Address', phone: '(916) 555-0168', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.7' });
-  j = await r.json(); ok(r.ok && j.ok, 'contact form lead saved with no ZIP, no address, no email');
+  j = await r.json(); ok(r.status === 400 && j.errors.address, 'contact form without address rejected');
+  r = await post('/api/lead', { ...good, name: 'No Number', phone: '(916) 555-0172', address: 'Main Street Sacramento' }, { 'X-Real-IP': '10.0.0.11' });
+  j = await r.json(); ok(r.status === 400 && j.errors.address, 'quiz address without street number rejected');
+  r = await post('/api/lead', { source: 'contact', loss_type: 'fire', name: 'No Email', phone: '(916) 555-0173', address: '500 Capitol Mall, Sacramento, CA 95814', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.7' });
+  j = await r.json(); ok(r.ok && j.ok, 'contact form lead saved with address, no ZIP, no email');
+  r = await post(`/api/lead/${j.id}/callback`, { slots: ['Mon Oct 19, 9:30 AM PT', 'Mon Oct 19, 1:30 PM PT', 'Tue Oct 20, 11:00 AM PT'] }, { 'X-Real-IP': '10.0.0.7' });
+  ok(r.ok, 'multiple call slots saved');
+  r = await post(`/api/lead/${j.id}/callback`, { slots: [] }, { 'X-Real-IP': '10.0.0.7' });
+  ok(r.status === 400, 'empty slots rejected');
   r = await post('/api/lead', { ...good, name: 'Quiz Address', phone: '(916) 555-0170', zip: '', address: '1 Main St, Oakland 94607' }, { 'X-Real-IP': '10.0.0.8' });
   j = await r.json(); ok(r.ok && j.ok, 'quiz lead saved with address and no ZIP');
-  r = await fetch(`${BASE}/api/lead`, { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Real-IP': '10.0.0.10' }, body: 'name=No+Script&phone=9165550171&loss_type=fire&elapsed_ms=30000' });
+  r = await fetch(`${BASE}/api/lead`, { method: 'POST', redirect: 'manual', headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Real-IP': '10.0.0.10' }, body: 'name=No+Script&phone=9165550171&loss_type=fire&address=12+Elm+St%2C+Sacramento&elapsed_ms=30000' });
   ok(r.status === 303 && r.headers.get('location') === '/thanks', 'plain form post lands on /thanks');
   r = await fetch(`${BASE}/thanks`); ok(r.ok && (await r.text()).includes('Got it'), 'thanks page renders');
+  r = await fetch(`${BASE}/thank-you`); t = await r.text();
+  ok(r.ok && t.includes('id="slot-save"') && t.includes('noindex,nofollow') && /no-store/.test(r.headers.get('cache-control')), 'thank-you page renders, noindex, not cached');
   r = await fetch(`${BASE}/`); const html = await r.text(); ok(/src="\/app\.js\?v=[0-9a-f]{10}"/.test(html) && /method="post"/.test(html), 'app.js is versioned and forms post');
 
   let last; for (let i = 0; i < 7; i++) last = await post('/api/lead', good, { 'X-Real-IP': '10.0.0.9' });

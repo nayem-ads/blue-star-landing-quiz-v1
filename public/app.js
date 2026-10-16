@@ -24,6 +24,7 @@
   }
 
   var state = load();
+  var TY = /^\/thank-you\/?$/.test(location.pathname);
   // Keep first touch attribution for the session.
   var qs = new URLSearchParams(location.search);
   state.track = state.track || {};
@@ -35,10 +36,13 @@
   function show(step, push) {
     step = Math.max(1, Math.min(5, step));
     // Never land on a later step without the answers it needs.
-    if (step >= 2 && !state.loss_type) step = 1;
-    if (step >= 3 && !state.claim_status) step = 2;
-    if (step >= 4 && !state.loss_timing) step = 3;
-    if (step === 5 && !state.lead_id) step = 4;
+    if (TY) step = 5; // the thank you page always shows the thank you screen, whatever was answered
+    else {
+      if (step >= 2 && !state.loss_type) step = 1;
+      if (step >= 3 && !state.claim_status) step = 2;
+      if (step >= 4 && !state.loss_timing) step = 3;
+      if (step === 5 && !state.lead_id) step = 4;
+    }
     current = step;
     body.classList.toggle('funnel', step > 1);
     var screens = d.querySelectorAll('.screen');
@@ -84,8 +88,8 @@
     if (c) dl('call_click', { location: c.dataset.call });
   });
 
-  d.getElementById('back').addEventListener('click', function () { history.back(); });
-  w.addEventListener('popstate', function (e) { show((e.state && e.state.step) || stepFromHash(), false); });
+  d.getElementById('back').addEventListener('click', function () { if (TY) location.href = '/'; else history.back(); });
+  w.addEventListener('popstate', function (e) { if (TY) return; show((e.state && e.state.step) || stepFromHash(), false); });
   function stepFromHash() { var m = /#step-(\d)/.exec(location.hash); return m ? +m[1] : 1; }
 
   // Sticky bar: appears once the quiz card scrolls out of view.
@@ -135,6 +139,95 @@
     }, 3000);
   });
 
+  // After a lead is saved: go to the real thank you page. generate_lead fires there once, so URL based conversions work too.
+  function goThanks(id, first, ev) {
+    if (state.lead_id !== id) { state.slots = []; state.slots_saved = ''; }
+    state.lead_id = id; state.first_name = first || '';
+    ev.lead_id = id; ev.page_variant = body.dataset.variant;
+    state.pending_lead = ev; save();
+    location.assign('/thank-you');
+  }
+  function addrOk(v) { v = (v || '').trim(); return v.length >= 6 && /[a-z]/i.test(v) && /\d/.test(v); }
+
+  // Address suggestions while typing (Photon, OpenStreetMap data, free, no key). Free typing always still works.
+  var US = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', 'District of Columbia': 'DC', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT', Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY' };
+  var SKIP = {}; 'n s e w north south east west old'.split(' ').forEach(function (x) { SKIP[x] = 1; });
+  function acFormat(p, q) {
+    var street = p.street || (p.type === 'street' ? p.name : '');
+    if (!street) return null;
+    if (p.type === 'house' && !p.housenumber) return null; // a building with no number is not an address
+    // Only keep results that match what they typed: the street's first name word and the house number.
+    var words = q.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
+    var first = street.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(function (x) { return x && !SKIP[x]; })[0];
+    if (!first || !words.some(function (x) { return !/^\d+$/.test(x) && first.indexOf(x) === 0; })) return null;
+    var qm = /^\s*(\d+[a-z]?)\b/i.exec(q), qnum = qm ? qm[1] : '';
+    if (qnum && p.housenumber && String(p.housenumber).toLowerCase().indexOf(qnum.toLowerCase()) !== 0) return null;
+    var num = p.housenumber || qnum; // street known but this house is not in the map yet: keep the number they typed
+    var line1 = (num ? num + ' ' : '') + street;
+    var st = US[p.state] || p.state || '';
+    var line2 = [p.city || p.town || p.village || p.district || p.county, [st, p.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    return { line1: line1, line2: line2, full: line1 + (line2 ? ', ' + line2 : ''), zip: /^\d{5}/.test(p.postcode || '') ? p.postcode.slice(0, 5) : '' };
+  }
+  function acInit(input, onPick) {
+    if (!input) return;
+    var list = d.getElementById(input.getAttribute('aria-controls')), zipEl = input.form && input.form.querySelector('input[name="zip"]');
+    var items = [], active = -1, timer = null, ctl = null, seq = 0;
+    function close() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); active = -1; }
+    function render() {
+      list.textContent = '';
+      if (!items.length) return close();
+      items.forEach(function (it, i) {
+        var li = d.createElement('li'); li.id = list.id + '-' + i; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', i === active ? 'true' : 'false');
+        li.textContent = it.line1; var s = d.createElement('small'); s.textContent = it.line2; li.appendChild(s);
+        li.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        li.addEventListener('click', function () { pick(i); });
+        list.appendChild(li);
+      });
+      var f = d.createElement('li'); f.className = 'ac-foot'; f.setAttribute('role', 'presentation'); f.textContent = 'Suggestions © OpenStreetMap contributors'; list.appendChild(f);
+      list.hidden = false; input.setAttribute('aria-expanded', 'true');
+      if (active > -1) { input.setAttribute('aria-activedescendant', list.id + '-' + active); var on = d.getElementById(list.id + '-' + active); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' }); }
+      else input.removeAttribute('aria-activedescendant');
+    }
+    function pick(i) {
+      var it = items[i]; if (!it) return;
+      input.value = it.full; if (zipEl) zipEl.value = it.zip;
+      items = []; close(); if (onPick) onPick();
+    }
+    function search(q) {
+      if (ctl) try { ctl.abort(); } catch (e) {}
+      ctl = w.AbortController ? new AbortController() : null;
+      var my = ++seq;
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=10&lang=en&lat=38.58&lon=-121.49', ctl ? { signal: ctl.signal } : {})
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (j) {
+          if (my !== seq || !j || !j.features) return;
+          var seen = {}; items = [];
+          j.features.forEach(function (f) {
+            var p = f.properties || {};
+            if (p.countrycode !== 'US' || (p.type !== 'house' && p.type !== 'street')) return;
+            var it = acFormat(p, q); if (!it || seen[it.full]) return;
+            seen[it.full] = 1; it.ca = p.state === 'California' ? 0 : 1; items.push(it);
+          });
+          items = items.map(function (it, i) { it.i = i; return it; }).sort(function (x, y) { return x.ca - y.ca || x.i - y.i; }).slice(0, 5); active = -1; // California first
+          if (d.activeElement === input) render();
+        })
+        .catch(function () {});
+    }
+    input.addEventListener('input', function () {
+      if (zipEl) zipEl.value = '';
+      var q = input.value.trim(); clearTimeout(timer);
+      if (q.length < 3) { seq++; items = []; return close(); }
+      timer = setTimeout(function () { search(q); }, 250);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (list.hidden || !items.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; render(); }
+      else if (e.key === 'Enter' && active > -1) { e.preventDefault(); pick(active); }
+      else if (e.key === 'Escape') { e.preventDefault(); close(); }
+    });
+    input.addEventListener('blur', function () { setTimeout(close, 150); });
+  }
+
   // Contact form (bottom of page). Same /api/lead endpoint; counts as a lead like the quiz.
   var pageT0 = Date.now();
   var cform = d.getElementById('cform');
@@ -151,20 +244,21 @@
       if (n === 'name') ok = v.length >= 2 && /[a-z]/i.test(v);
       if (n === 'phone') { var p = v.replace(/\D/g, ''); if (p.length === 11 && p[0] === '1') p = p.slice(1); ok = p.length === 10 && !/^[01]/.test(p); }
       if (n === 'email') ok = !v || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+      if (n === 'address') ok = addrOk(v);
       cErr(n, !ok); return ok;
     };
-    ['name', 'phone', 'email'].forEach(function (n) {
+    ['name', 'phone', 'email', 'address'].forEach(function (n) {
       cform[n].addEventListener('blur', function () { if (cform[n].value) cCheck(n); });
       cform[n].addEventListener('input', function () { cErr(n, false); });
     });
     cform.addEventListener('submit', function (e) {
       e.preventDefault(); cerr.classList.remove('show');
-      var okAll = ['name', 'phone', 'email'].map(cCheck).every(Boolean);
+      var okAll = ['name', 'phone', 'email', 'address'].map(cCheck).every(Boolean);
       if (!okAll) { var bad = cform.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
       cbtn.disabled = true; var label = cbtn.innerHTML; cbtn.textContent = 'Sending';
       var payload = {
         source: 'contact', loss_type: cform.loss_type.value, claim_status: cform.claim_status.value || null,
-        name: cform.name.value, phone: cform.phone.value, address: cform.address.value, email: cform.email.value, notes: cform.notes.value, company: cform.company.value,
+        name: cform.name.value, phone: cform.phone.value, address: cform.address.value, zip: cform.zip.value, email: cform.email.value, notes: cform.notes.value, company: cform.company.value,
         elapsed_ms: Date.now() - pageT0, page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
       };
       for (var k in state.track) payload[k] = state.track[k];
@@ -172,9 +266,7 @@
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (j && j.ok) {
-            dl('generate_lead', { lead_id: j.id, loss_type: payload.loss_type, claim_status: payload.claim_status || '', form: 'contact' });
-            d.getElementById('c-fname').textContent = j.first_name ? ', ' + j.first_name : '';
-            cwrap.classList.add('ok');
+            goThanks(j.id, j.first_name, { loss_type: payload.loss_type, claim_status: payload.claim_status || '', form: 'contact' });
           } else if (j && j.errors) { Object.keys(j.errors).forEach(function (k) { cErr(k, true); }); }
           else throw new Error((j && j.error) || 'error');
         })
@@ -184,6 +276,7 @@
         })
         .finally(function () { cbtn.disabled = false; cbtn.innerHTML = label; });
     });
+    acInit(d.getElementById('c-address'), function () { cCheck('address'); });
   } catch (e) { if (w.console) console.error('contact form init', e); }
 
   function renderAnswers() {
@@ -203,7 +296,7 @@
   });
 
   function fieldErr(name, on) { var f = d.querySelector('.field[data-f="' + name + '"]'); if (f) f.classList.toggle('bad', !!on); }
-  ['f-name', 'f-phone'].forEach(function (id) {
+  ['f-name', 'f-phone', 'f-address'].forEach(function (id) {
     d.getElementById(id).addEventListener('blur', function (e) { if (e.target.value) check(e.target.name); });
     d.getElementById(id).addEventListener('input', function (e) { fieldErr(e.target.name, false); });
   });
@@ -211,6 +304,7 @@
     var v = d.getElementById('f-' + name).value.trim(), ok = true;
     if (name === 'name') ok = v.length >= 2 && /[a-z]/i.test(v);
     if (name === 'phone') { var p = v.replace(/\D/g, ''); if (p.length === 11 && p[0] === '1') p = p.slice(1); ok = p.length === 10 && !/^[01]/.test(p); }
+    if (name === 'address') ok = addrOk(v);
     fieldErr(name, !ok); return ok;
   }
 
@@ -218,12 +312,12 @@
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     ferr.classList.remove('show');
-    var okAll = ['name', 'phone'].map(check).every(Boolean);
+    var okAll = ['name', 'phone', 'address'].map(check).every(Boolean);
     if (!okAll) { var bad = form.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
     btn.disabled = true; btn.textContent = 'Sending';
     var payload = {
       loss_type: state.loss_type, claim_status: state.claim_status, loss_timing: state.loss_timing,
-      name: form.name.value, phone: form.phone.value, address: form.address.value, company: form.company.value,
+      name: form.name.value, phone: form.phone.value, address: form.address.value, zip: form.zip.value, company: form.company.value,
       elapsed_ms: state.t0 ? Date.now() - state.t0 : null, page_variant: body.dataset.variant,
       landing_url: state.landing_url, referrer: state.referrer
     };
@@ -232,9 +326,7 @@
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
       .then(function (res) {
         if (res.j && res.j.ok) {
-          state.lead_id = res.j.id; state.first_name = res.j.first_name; save();
-          dl('generate_lead', { lead_id: res.j.id, loss_type: state.loss_type, claim_status: state.claim_status });
-          show(5, true);
+          goThanks(res.j.id, res.j.first_name, { loss_type: state.loss_type, claim_status: state.claim_status, form: 'quiz' });
         } else if (res.j && res.j.errors) {
           Object.keys(res.j.errors).forEach(function (k) { fieldErr(k, true); });
           if (res.j.errors.loss_type || res.j.errors.claim_status || res.j.errors.loss_timing) show(1, true);
@@ -248,6 +340,7 @@
       })
       .finally(function () { btn.disabled = false; btn.textContent = 'Get my free review'; });
   });
+  acInit(d.getElementById('f-address'), function () { check('address'); });
 
   // Thank you: call slots in Pacific time, next 3 business days, 9 AM to 5 PM only.
   var TIMES = ['9:30 AM', '11:00 AM', '1:30 PM', '3:30 PM'];
@@ -268,35 +361,79 @@
     }
     return out;
   }
-  var picked = { day: 0 };
+  var picked = { day: 0 }, MAXP = 6, slotMsg = '', slotBad = false;
+  function slotLabel(x, t) { return x.wd + ' ' + x.mon + ' ' + x.md + ', ' + t + ' PT'; }
   function renderSlots() {
     d.getElementById('fname').textContent = state.first_name ? ', ' + state.first_name : '';
-    var list = days(), dd = d.getElementById('days'), tt = d.getElementById('times');
+    var box = d.getElementById('slots'), li = d.getElementById('li-pick');
+    if (!state.lead_id) { box.hidden = true; if (li) li.hidden = true; return; }
+    state.slots = state.slots || [];
+    var list = days(), dd = d.getElementById('days'), tt = d.getElementById('times'), order = [];
+    list.forEach(function (x) { x.times.forEach(function (t) { order.push(slotLabel(x, t)); }); });
+    state.slots.sort(function (p, q) { var i = order.indexOf(p), j = order.indexOf(q); return (i < 0 ? 999 : i) - (j < 0 ? 999 : j); });
     dd.textContent = '';
     list.forEach(function (x, i) {
+      var n = x.times.filter(function (t) { return state.slots.indexOf(slotLabel(x, t)) > -1; }).length;
       var b = d.createElement('button'); b.type = 'button'; b.className = 'day'; b.setAttribute('aria-pressed', i === picked.day ? 'true' : 'false');
-      b.innerHTML = (x.today ? 'Today' : x.wd) + '<b>' + x.md + '</b>';
+      b.innerHTML = (x.today ? 'Today' : x.wd) + '<b>' + x.md + '</b>' + (n ? '<i aria-hidden="true">' + n + '</i>' : '');
+      if (n) b.setAttribute('aria-label', (x.today ? 'Today' : x.wd) + ' ' + x.md + ', ' + n + ' picked');
       b.addEventListener('click', function () { picked.day = i; renderSlots(); });
       dd.appendChild(b);
     });
     tt.textContent = '';
     var day = list[picked.day] || list[0];
-    if (!day) return;
-    day.times.forEach(function (t) {
-      var label = day.wd + ' ' + day.mon + ' ' + day.md + ', ' + t + ' PT';
+    if (day) day.times.forEach(function (t) {
+      var label = slotLabel(day, t);
       var b = d.createElement('button'); b.type = 'button'; b.className = 'time'; b.textContent = t;
-      b.setAttribute('aria-pressed', state.slot === label ? 'true' : 'false');
-      b.addEventListener('click', function () { book(label); });
+      b.setAttribute('aria-pressed', state.slots.indexOf(label) > -1 ? 'true' : 'false');
+      b.addEventListener('click', function () { toggleSlot(label); });
       tt.appendChild(b);
     });
-    if (state.slot) booked(state.slot);
+    var pk = d.getElementById('picks'), pl = d.getElementById('picklist');
+    pl.textContent = ''; pk.hidden = !state.slots.length;
+    state.slots.forEach(function (s) {
+      var li2 = d.createElement('li'), b = d.createElement('button'); b.type = 'button';
+      b.textContent = s.replace(' PT', '') + ' ×'; b.setAttribute('aria-label', 'Remove ' + s);
+      b.addEventListener('click', function () { toggleSlot(s); });
+      li2.appendChild(b); pl.appendChild(li2);
+    });
+    var sb = d.getElementById('slot-save'), same = state.slots.join('; ') === (state.slots_saved || '');
+    sb.disabled = !state.slots.length || same;
+    sb.textContent = state.slots_saved ? (same ? 'Call times saved' : 'Update my call times') : (state.slots.length > 1 ? 'Confirm these ' + state.slots.length + ' call times' : 'Confirm my call time');
+    var el = d.getElementById('booked');
+    var msg = slotMsg || (state.slots_saved && same ? 'Saved. We’ll call the number you gave us at one of these times.' : '');
+    el.textContent = msg; el.classList.toggle('show', !!msg); el.classList.toggle('bad', !!slotMsg && slotBad);
   }
-  function booked(label) { var el = d.getElementById('booked'); el.textContent = 'Booked: ' + label + '. We’ll call the number you gave us.'; el.classList.add('show'); }
-  function book(label) {
-    state.slot = label; save(); renderSlots(); booked(label);
-    dl('callback_booked', { slot: label });
-    if (!state.lead_id) return;
-    fetch('/api/lead/' + encodeURIComponent(state.lead_id) + '/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slot: label }) }).catch(function () {});
+  function toggleSlot(label) {
+    state.slots = state.slots || []; slotMsg = '';
+    var i = state.slots.indexOf(label);
+    if (i > -1) state.slots.splice(i, 1);
+    else if (state.slots.length >= MAXP) { slotMsg = 'You can pick up to ' + MAXP + ' times.'; slotBad = true; }
+    else state.slots.push(label);
+    save(); renderSlots();
+  }
+  function saveSlots() {
+    if (!state.lead_id || !state.slots || !state.slots.length) return;
+    var picks = state.slots.slice(), sb = d.getElementById('slot-save');
+    sb.disabled = true; sb.textContent = 'Saving'; slotMsg = '';
+    fetch('/api/lead/' + encodeURIComponent(state.lead_id) + '/callback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ slots: picks }) })
+      .then(function (r) { if (!r.ok) throw new Error('save'); })
+      .then(function () {
+        state.slots_saved = picks.join('; '); save();
+        dl('callback_booked', { slot: picks.join('; '), slot_count: picks.length });
+        renderSlots();
+      })
+      .catch(function () { slotMsg = 'We couldn’t save that. Please try again or call (916) 507-1005.'; slotBad = true; renderSlots(); });
+  }
+  var slotSave = d.getElementById('slot-save');
+  if (slotSave) slotSave.addEventListener('click', saveSlots);
+
+  // Real thank you page at /thank-you. The lead event fires once here, after the redirect.
+  if (TY) {
+    body.classList.add('ty');
+    if (state.pending_lead) { var pl0 = state.pending_lead; delete state.pending_lead; save(); dl('generate_lead', pl0); }
+    show(5, false);
+    return;
   }
 
   // Restore position on reload or deep link.

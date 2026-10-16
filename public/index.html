@@ -285,6 +285,27 @@ body.funnel #landing{display:none}
 .time[aria-pressed=true]{border:2px solid var(--royal);background:#EAF0FC}
 .booked{display:none;margin-top:12px;padding:12px 14px;border-radius:10px;background:#EAF0FC;font-weight:600;font-size:14px;color:var(--navy)}
 .booked.show{display:block}
+.booked.bad{background:#FDECEA;color:var(--err)}
+.slots-sub{font-size:13px;color:var(--muted);margin:-4px 0 10px}
+.day{position:relative}
+.day i{position:absolute;top:5px;right:5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--green);color:#fff;font:700 11px/18px var(--fb);font-style:normal}
+.time[aria-pressed=true]::before{content:"\2713\00a0"}
+.picks{margin-top:12px}
+.picks-h{font:600 13px var(--fb);color:var(--muted);margin:0 0 6px}
+.picks ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.picks button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid var(--royal);border-radius:18px;background:#EAF0FC;color:var(--navy);font:600 13px var(--fb);cursor:pointer}
+#slot-save{margin-top:14px}
+#slot-save:disabled{opacity:.45;box-shadow:none;cursor:default}
+#slot-save:disabled::after{display:none}
+body.ty .back{display:none}
+body.ty .logo-link{display:inline-flex}
+.screen .field.bad input{border-color:var(--err)}
+.ac-box{position:relative}
+.ac-list{position:absolute;left:0;right:0;top:100%;margin:4px 0 0;padding:6px 0;list-style:none;background:var(--white);border:1.5px solid var(--line);border-radius:10px;box-shadow:0 12px 28px rgba(8,16,51,.16);z-index:40;max-height:320px;overflow-y:auto}
+.ac-list li{padding:10px 14px;min-height:48px;cursor:pointer;font-size:15px;line-height:1.3;color:var(--ink)}
+.ac-list li small{display:block;font-size:13px;color:var(--muted)}
+.ac-list li[aria-selected=true],.ac-list li[role=option]:hover{background:var(--tint)}
+.ac-list li.ac-foot{min-height:0;padding:6px 14px 2px;font-size:11px;color:var(--muted);cursor:default;background:none}
 .save{display:flex;align-items:center;gap:10px;margin-top:16px;min-height:52px;padding:0 16px;border:1px solid var(--line);border-radius:var(--r);background:var(--white);text-decoration:none;color:var(--ink);font-weight:600;font-size:15px}
 .save .ic{color:var(--royal)}
 /* load motion */
@@ -564,7 +585,7 @@ body.funnel #landing{display:none}
      <div class="field" data-cf="name"><label for="c-name">Full name</label><input id="c-name" name="name" autocomplete="name" autocapitalize="words" placeholder="First and last name" required><span class="err">Please enter your name.</span></div>
      <div class="field" data-cf="phone"><label for="c-phone">Mobile number</label><input id="c-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(916) 555 0100" required><span class="help">So a licensed adjuster can call you about this claim.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
      <div class="field" data-cf="email"><label for="c-email">Email (optional)</label><input id="c-email" name="email" type="email" inputmode="email" autocomplete="email" placeholder="name@email.com"><span class="help">For a written summary of what we find.</span><span class="err">Please check the email address.</span></div>
-     <div class="field" data-cf="address"><label for="c-address">Property address (optional)</label><input id="c-address" name="address" type="text" autocomplete="street-address" placeholder="Street, city"><span class="help">Helps us look up the property before we call.</span></div>
+     <div class="field" data-cf="address"><label for="c-address">Property address</label><div class="ac-box"><input id="c-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" placeholder="Start typing your street address" required minlength="6" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="c-address-list" aria-describedby="c-address-help"><ul class="ac-list" id="c-address-list" role="listbox" aria-label="Address suggestions" hidden></ul></div><input type="hidden" name="zip" value=""><span class="help" id="c-address-help">Where the damage happened. Pick it from the list or type it in full.</span><span class="err">Please enter the property address with the street number.</span></div>
      <div class="field"><label for="c-loss">What happened</label><select id="c-loss" name="loss_type"><option value="fire">Fire</option><option value="smoke">Smoke damage</option><option value="water">Water or a leak</option><option value="denied">Claim denied</option><option value="other">Something else</option></select></div>
      <div class="field"><label for="c-status">Where the claim stands (optional)</label><select id="c-status" name="claim_status"><option value="">Choose one</option><option value="not_filed">Haven’t filed yet</option><option value="waiting">Filed, still waiting</option><option value="low_offer">Got an offer, it looks low</option><option value="denied">Denied, in full or in part</option></select></div>
      <div class="field"><label for="c-notes">Anything we should know (optional)</label><textarea id="c-notes" name="notes" maxlength="1000" placeholder="Dates, letters, what was damaged"></textarea></div>
@@ -617,7 +638,7 @@ body.funnel #landing{display:none}
    <div class="formerr" id="formerr" role="alert"></div>
    <div class="field" data-f="name"><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="First and last name" required><span class="err">Please enter your name.</span></div>
    <div class="field" data-f="phone"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" enterkeyhint="next" placeholder="(415) 555 0142" required><span class="help">A licensed adjuster calls about this claim only.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
-   <div class="field" data-f="address"><label for="f-address">Property address (optional)</label><input id="f-address" name="address" type="text" autocomplete="street-address" enterkeyhint="send" placeholder="Street, city"><span class="help">Helps us look up the property before we call.</span></div>
+   <div class="field" data-f="address"><label for="f-address">Property address</label><div class="ac-box"><input id="f-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" enterkeyhint="send" placeholder="Start typing your street address" required minlength="6" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-address-list" aria-describedby="f-address-help"><ul class="ac-list" id="f-address-list" role="listbox" aria-label="Address suggestions" hidden></ul></div><input type="hidden" name="zip" value=""><span class="help" id="f-address-help">Where the damage happened. Pick it from the list or type it in full.</span><span class="err">Please enter the property address with the street number.</span></div>
    <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
    <button class="btn block" type="submit" id="submit">Get my free review</button>
    <p class="consent">By tapping, you agree Blue Star Adjusters may call or text you about this claim, including by automated means. Consent isn’t a condition of service. Message and data rates may apply. We don’t sell or share your details. <a href="/privacy">Privacy</a>.</p>
@@ -630,12 +651,15 @@ body.funnel #landing{display:none}
   <ol class="next">
    <li>We call you from (916) 507-1005, usually the same business day.</li>
    <li>Have the insurer’s letter or estimate nearby if you can.</li>
-   <li>Prefer a set time? Pick one below.</li>
+   <li id="li-pick">Prefer set times? Pick as many as suit you below.</li>
   </ol>
-  <div class="slots">
-   <h3>Pick a call time (Pacific)</h3>
+  <div class="slots" id="slots">
+   <h3>Pick the times that suit you (Pacific)</h3>
+   <p class="slots-sub">Choose one or more. We call you at one of them.</p>
    <div class="days" id="days"></div>
-   <div class="times" id="times"></div>
+   <div class="times" id="times" role="group" aria-label="Call times"></div>
+   <div class="picks" id="picks" hidden><p class="picks-h">Your picks</p><ul id="picklist"></ul></div>
+   <button type="button" class="btn block" id="slot-save" disabled>Confirm my call times</button>
    <p class="booked" id="booked" role="status"></p>
   </div>
   <a class="save" href="tel:+19165071005" data-call="thankyou"><svg class="ic"><use href="#i-phone"/></svg>Call us now: (916) 507-1005</a>

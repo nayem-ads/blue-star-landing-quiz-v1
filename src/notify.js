@@ -83,9 +83,12 @@ async function notifyLead(lead) {
 }
 
 async function notifyCallback(info, slot, publicId) {
-  const subject = `Call time picked: ${slot} (${info.name || 'lead'})`;
-  const rows = [['Call time (Pacific)', slot], ['Name', info.name], ['Phone', info.phone], ['Lead ID', publicId]].filter(r => r[1]);
-  const html = `<div style="font-family:Arial,sans-serif;font-size:15px"><p><b>The lead picked a call time.</b></p>${rows.map(([k, v]) => `<p><b>${esc(k)}:</b> ${esc(v)}</p>`).join('')}</div>`;
+  const times = String(slot).split('; ').filter(Boolean);
+  const subject = times.length > 1
+    ? `Call times picked (${times.length}): ${times[0]} and more (${info.name || 'lead'})`
+    : `Call time picked: ${times[0] || slot} (${info.name || 'lead'})`;
+  const rows = [...times.map((t, i) => [times.length > 1 ? `Call time ${i + 1} (Pacific)` : 'Call time (Pacific)', t]), ['Name', info.name], ['Phone', info.phone], ['Lead ID', publicId]].filter(r => r[1]);
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px"><p><b>The lead picked ${times.length > 1 ? 'call times. Call at any of them.' : 'a call time.'}</b></p>${rows.map(([k, v]) => `<p><b>${esc(k)}:</b> ${esc(v)}</p>`).join('')}</div>`;
   if (process.env.RESEND_API_KEY) return sendResend(subject, html, rows.map(r => r.join(': ')).join('\n'));
   return sendFormSubmit(subject, rows);
 }
