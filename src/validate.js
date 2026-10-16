@@ -32,9 +32,10 @@ function validateLead(b) {
   if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) errors.phone = 'Please enter a 10 digit US mobile number.';
   out.phone = digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : digits;
 
-  // Contact form: property address is optional and replaces ZIP. Quiz still requires a 5 digit ZIP.
-  // Property address is optional on both forms and replaces the ZIP field.
-  out.address = clip(b.address, 200).replace(/\s+/g, ' ') || null;
+  // Property address is required on both forms (replaces the ZIP field). It needs a street number.
+  const address = clip(b.address, 200).replace(/\s+/g, ' ');
+  if (address.length < 6 || !/[a-zA-Z]/.test(address) || !/\d/.test(address)) errors.address = 'Please enter the property address with the street number.';
+  out.address = address || null;
   let zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
   if (zip.length !== 5) {
     const m = (out.address || '').match(/\b(9\d{4})\b/); // pull a CA ZIP out of the address if one was typed

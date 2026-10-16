@@ -50,7 +50,7 @@ const pixelHead = pixelOn
 const pixelBody = pixelOn ? `<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${PIXEL}&ev=PageView&noscript=1"></noscript>` : '';
 const ROBOTS = process.env.ALLOW_INDEX === 'true' ? 'index,follow' : 'noindex,follow';
 
-function page(req) {
+function page(req, robots) {
   const key = String(req.query.loss || req.query.h || '').toLowerCase();
   const variant = HEADLINES[key] ? key : 'default';
   return TEMPLATE
@@ -60,12 +60,18 @@ function page(req) {
     .replaceAll('{{GTM_BODY}}', gtmBody)
     .replaceAll('{{PIXEL_HEAD}}', pixelHead)
     .replaceAll('{{PIXEL_BODY}}', pixelBody)
-    .replaceAll('{{ROBOTS}}', ROBOTS);
+    .replaceAll('{{ROBOTS}}', robots || ROBOTS);
 }
 
 app.get(['/', '/index.html'], (req, res) => {
   res.set('Cache-Control', 'no-cache');
   res.type('html').send(page(req));
+});
+
+// Real thank you page after a lead is saved. Same page shell; app.js shows the thank you screen and call time picker.
+app.get(['/thank-you', '/thank-you/'], (req, res) => {
+  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
+  res.type('html').send(page(req, 'noindex,nofollow').replace(/<title>[^<]*<\/title>/, '<title>Thank you. We have your request | Blue Star Adjusters</title>'));
 });
 
 app.use(express.static(PUB, {
@@ -134,7 +140,11 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
 
 app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, res) => {
   const id = String(req.params.id);
-  const slot = String((req.body || {}).slot || '').slice(0, 60);
+  // One or more call times: { slots: [...] } from the multi picker, or { slot } from older pages.
+  const b = req.body || {};
+  const raw = Array.isArray(b.slots) ? b.slots : (b.slot ? [b.slot] : []);
+  const list = [...new Set(raw.map(x => String(x || '').trim().slice(0, 60)).filter(Boolean))].slice(0, 6);
+  const slot = list.join('; ').slice(0, 400);
   if (!/^[0-9a-f-]{36}$/i.test(id) || !slot) return res.status(400).json({ ok: false });
   if (limited(clientIp(req))) return res.status(429).json({ ok: false });
   try {
