@@ -4,7 +4,7 @@
 // 2. otherwise            -> FormSubmit (no account; first email asks you to click "Activate" once).
 const { LABELS } = require('./validate');
 
-const TO = () => (process.env.NOTIFY_TO || 'nayem.adsmanager@gmail.com').split(',').map(s => s.trim()).filter(Boolean);
+const TO = () => (process.env.NOTIFY_TO || 'nayem.adsmanager@gmail.com,mike@bluestaradjusters.com').split(',').map(s => s.trim()).filter(Boolean);
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -19,6 +19,7 @@ function rowsFor(lead) {
     ['Phone', lead.phone, `tel:+1${telDigits}`],
     ['Form', lead.source === 'contact' ? 'Contact form (bottom of page)' : 'Quiz'],
     ['Email', lead.email, lead.email ? `mailto:${lead.email}` : null],
+    ['Property address', lead.address],
     ['ZIP', lead.zip],
     ['What happened', LABELS.loss_type[lead.loss_type] || lead.loss_type],
     ['Claim status', LABELS.claim_status[lead.claim_status] || lead.claim_status],
@@ -35,7 +36,7 @@ function rowsFor(lead) {
 
 function render(lead) {
   const rows = rowsFor(lead);
-  const subject = `New ${lead.source === 'contact' ? 'contact form' : 'claim review'} lead: ${LABELS.loss_type[lead.loss_type] || lead.loss_type}${lead.claim_status ? ', ' + (LABELS.claim_status[lead.claim_status] || '') : ''} (${lead.zip})`;
+  const subject = `New ${lead.source === 'contact' ? 'contact form' : 'claim review'} lead: ${LABELS.loss_type[lead.loss_type] || lead.loss_type}${lead.claim_status ? ', ' + (LABELS.claim_status[lead.claim_status] || '') : ''} (${lead.zip || (lead.address ? lead.address.slice(0, 40) : 'no address')})`;
   const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#0E1630">
 <p style="margin:0 0 12px"><b>New lead from the Quiz First landing page.</b> Call within the hour if you can, during 9 AM to 5 PM Pacific.</p>
 <table cellpadding="8" style="border-collapse:collapse;border:1px solid #D9DFEC">${rows.map(([k, v, href]) =>

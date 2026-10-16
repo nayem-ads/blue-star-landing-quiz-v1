@@ -139,34 +139,32 @@
   var pageT0 = Date.now();
   var cform = d.getElementById('cform');
   if (cform) {
-    var cwrap = d.getElementById('cform-wrap'), cbtn = d.getElementById('c-submit'), cerr = d.getElementById('cformerr'), cphone = d.getElementById('c-phone'), czip = d.getElementById('c-zip'), cecho = d.getElementById('c-echo');
+    var cwrap = d.getElementById('cform-wrap'), cbtn = d.getElementById('c-submit'), cerr = d.getElementById('cformerr'), cphone = d.getElementById('c-phone'), cecho = d.getElementById('c-echo');
     var fmt = function (x) { return x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x; };
     cphone.addEventListener('input', function () {
       var x = cphone.value.replace(/\D/g, ''); if (x.length === 11 && x[0] === '1') x = x.slice(1); x = x.slice(0, 10);
       cphone.value = fmt(x); cecho.textContent = x.length === 10 ? ' at ' + cphone.value : '';
     });
-    czip.addEventListener('input', function () { czip.value = czip.value.replace(/\D/g, '').slice(0, 5); });
     var cErr = function (n, on) { var f = cform.querySelector('.field[data-cf="' + n + '"]'); if (f) f.classList.toggle('bad', !!on); };
     var cCheck = function (n) {
       var v = (cform[n].value || '').trim(), ok = true;
       if (n === 'name') ok = v.length >= 2 && /[a-z]/i.test(v);
       if (n === 'phone') { var p = v.replace(/\D/g, ''); if (p.length === 11 && p[0] === '1') p = p.slice(1); ok = p.length === 10 && !/^[01]/.test(p); }
-      if (n === 'zip') ok = /^\d{5}$/.test(v);
       if (n === 'email') ok = !v || /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
       cErr(n, !ok); return ok;
     };
-    ['name', 'phone', 'email', 'zip'].forEach(function (n) {
+    ['name', 'phone', 'email'].forEach(function (n) {
       cform[n].addEventListener('blur', function () { if (cform[n].value) cCheck(n); });
       cform[n].addEventListener('input', function () { cErr(n, false); });
     });
     cform.addEventListener('submit', function (e) {
       e.preventDefault(); cerr.classList.remove('show');
-      var okAll = ['name', 'phone', 'email', 'zip'].map(cCheck).every(Boolean);
+      var okAll = ['name', 'phone', 'email'].map(cCheck).every(Boolean);
       if (!okAll) { var bad = cform.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
       cbtn.disabled = true; var label = cbtn.innerHTML; cbtn.textContent = 'Sending';
       var payload = {
         source: 'contact', loss_type: cform.loss_type.value, claim_status: cform.claim_status.value || null,
-        name: cform.name.value, phone: cform.phone.value, zip: cform.zip.value, email: cform.email.value, notes: cform.notes.value, company: cform.company.value,
+        name: cform.name.value, phone: cform.phone.value, address: cform.address.value, email: cform.email.value, notes: cform.notes.value, company: cform.company.value,
         elapsed_ms: Date.now() - pageT0, page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
       };
       for (var k in state.track) payload[k] = state.track[k];

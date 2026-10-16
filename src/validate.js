@@ -32,9 +32,14 @@ function validateLead(b) {
   if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) errors.phone = 'Please enter a 10 digit US mobile number.';
   out.phone = digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : digits;
 
-  const zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
-  if (zip.length !== 5) errors.zip = 'Please enter a 5 digit ZIP code.';
-  out.zip = zip;
+  // Contact form: property address is optional and replaces ZIP. Quiz still requires a 5 digit ZIP.
+  out.address = contact ? (clip(b.address, 200).replace(/\s+/g, ' ') || null) : null;
+  let zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
+  if (contact && zip.length !== 5) {
+    const m = (out.address || '').match(/\b(9\d{4})\b/); // pull a CA ZIP out of the address if one was typed
+    zip = m ? m[1] : '';
+  } else if (zip.length !== 5) errors.zip = 'Please enter a 5 digit ZIP code.';
+  out.zip = zip || null;
 
   for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'page_variant']) out[k] = clip(b[k], 300) || null;
   out.landing_url = clip(b.landing_url, 1000) || null;
