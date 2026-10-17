@@ -56,6 +56,21 @@ const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6'
   ok(r.ok && t.includes('id="slot-save"') && t.includes('noindex,nofollow') && /no-store/.test(r.headers.get('cache-control')), 'thank-you page renders, noindex, not cached');
   r = await fetch(`${BASE}/`); const html = await r.text(); ok(/src="\/app\.js\?v=[0-9a-f]{10}"/.test(html) && /method="post"/.test(html), 'app.js is versioned and forms post');
 
+  const pp = (b, ip) => fetch(BASE + '/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Real-IP': ip }, body: JSON.stringify(b) });
+  r = await pp({ pid: 'smoke-partial-1', form: 'quiz', name: 'Partial Only', phone: '(916) 555-0181', address: '9 Elm St, Sacramento', loss_type: 'fire' }, '10.0.1.1');
+  ok(r.ok, 'unfinished form saved (text/plain body)');
+  r = await pp({ pid: 'smoke-partial-2', phone: '123' }, '10.0.1.1'); ok(r.status === 400, 'unfinished form with bad phone rejected');
+  r = await pp({ pid: 'smoke-partial-3', name: 'Then Sent', phone: '(916) 555-0182' }, '10.0.1.1'); ok(r.ok, 'second unfinished form saved');
+  r = await post('/api/lead', { ...good, name: 'Then Sent', phone: '(916) 555-0182' }, { 'X-Real-IP': '10.0.1.2' }); ok(r.ok, 'full lead from the same phone');
+  r = await fetch(BASE + '/'); t = await r.text(); ok(!/Verify<\/a>/.test(t) && !/construction set/.test(t) && !/builder/i.test(t) && !/pcapia/i.test(t) && t.includes('logo-napia.webp') && !t.includes('c-email'), 'page copy: no Verify, no builder quote, NAPIA not PCAPIA, no email field');
+  if (KEY) {
+    await new Promise(res => setTimeout(res, 2500));
+    const pc = await (await fetch(`${BASE}/admin/partials.csv?key=${encodeURIComponent(KEY)}`)).text();
+    const row = n => pc.split('\n').find(l => l.includes(n)) || '';
+    ok(/"converted"/.test(row('Then Sent')), 'unfinished form marked converted after full lead');
+    ok(/"(alerted|alert_failed)"/.test(row('Partial Only')), 'abandoned form picked up for an alert (' + (row('Partial Only').split(',')[1] || 'missing') + ')');
+  }
+
   let last; for (let i = 0; i < 7; i++) last = await post('/api/lead', good, { 'X-Real-IP': '10.0.0.9' });
   ok(last.status === 429, 'rate limit after 6 per 10 minutes');
 

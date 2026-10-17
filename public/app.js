@@ -192,6 +192,7 @@
       var it = items[i]; if (!it) return;
       input.value = it.full; if (zipEl) zipEl.value = it.zip;
       items = []; close(); if (onPick) onPick();
+      try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
     }
     function search(q) {
       if (ctl) try { ctl.abort(); } catch (e) {}
@@ -247,18 +248,18 @@
       if (n === 'address') ok = addrOk(v);
       cErr(n, !ok); return ok;
     };
-    ['name', 'phone', 'email', 'address'].forEach(function (n) {
+    ['name', 'phone', 'address'].forEach(function (n) {
       cform[n].addEventListener('blur', function () { if (cform[n].value) cCheck(n); });
       cform[n].addEventListener('input', function () { cErr(n, false); });
     });
     cform.addEventListener('submit', function (e) {
       e.preventDefault(); cerr.classList.remove('show');
-      var okAll = ['name', 'phone', 'email', 'address'].map(cCheck).every(Boolean);
+      var okAll = ['name', 'phone', 'address'].map(cCheck).every(Boolean);
       if (!okAll) { var bad = cform.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
       cbtn.disabled = true; var label = cbtn.innerHTML; cbtn.textContent = 'Sending';
       var payload = {
         source: 'contact', loss_type: cform.loss_type.value, claim_status: cform.claim_status.value || null,
-        name: cform.name.value, phone: cform.phone.value, address: cform.address.value, zip: cform.zip.value, email: cform.email.value, notes: cform.notes.value, company: cform.company.value,
+        name: cform.name.value, phone: cform.phone.value, address: cform.address.value, zip: cform.zip.value, notes: cform.notes.value, company: cform.company.value,
         elapsed_ms: Date.now() - pageT0, page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
       };
       for (var k in state.track) payload[k] = state.track[k];
@@ -266,6 +267,7 @@
         .then(function (r) { return r.json(); })
         .then(function (j) {
           if (j && j.ok) {
+            state.done_phone = digitsOf(payload.phone);
             goThanks(j.id, j.first_name, { loss_type: payload.loss_type, claim_status: payload.claim_status || '', form: 'contact' });
           } else if (j && j.errors) { Object.keys(j.errors).forEach(function (k) { cErr(k, true); }); }
           else throw new Error((j && j.error) || 'error');
@@ -326,6 +328,7 @@
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
       .then(function (res) {
         if (res.j && res.j.ok) {
+          state.done_phone = digitsOf(payload.phone);
           goThanks(res.j.id, res.j.first_name, { loss_type: state.loss_type, claim_status: state.claim_status, form: 'quiz' });
         } else if (res.j && res.j.errors) {
           Object.keys(res.j.errors).forEach(function (k) { fieldErr(k, true); });
@@ -427,6 +430,57 @@
   }
   var slotSave = d.getElementById('slot-save');
   if (slotSave) slotSave.addEventListener('click', saveSlots);
+
+  // Autofill across forms, and unfinished form capture. Details typed in one form fill the other.
+  // A valid phone number left without pressing send is saved so the team can follow up (see /privacy).
+  if (!state.pid) { state.pid = (w.crypto && w.crypto.randomUUID) ? w.crypto.randomUUID() : 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12); save(); }
+  var lastPartial = '', ptimer = null;
+  function digitsOf(v) { var x = String(v || '').replace(/\D/g, ''); if (x.length === 11 && x[0] === '1') x = x.slice(1); return x; }
+  function remember(which, f) {
+    var c = state.contact || {};
+    ['name', 'phone', 'address', 'zip'].forEach(function (k) { if (f[k]) c[k] = f[k].value; });
+    c.form = which; state.contact = c; save();
+  }
+  function prefill() {
+    var c = state.contact; if (!c) return;
+    [form, cform].forEach(function (f) {
+      if (!f) return;
+      ['name', 'phone', 'address'].forEach(function (k) { if (f[k] && !f[k].value && c[k]) f[k].value = c[k]; });
+      if (f.zip && !f.zip.value && c.zip && f.address && f.address.value === c.address) f.zip.value = c.zip;
+    });
+    var cp = d.getElementById('c-phone'); if (cp && cp.value) { try { cp.dispatchEvent(new Event('input')); } catch (e) {} }
+  }
+  function partialBody() {
+    var c = state.contact || {}, ph = digitsOf(c.phone);
+    if (ph.length !== 10 || /^[01]/.test(ph) || state.done_phone === ph) return null;
+    var isC = c.form === 'contact' && cform, f = isC ? cform : form;
+    if (f && f.company && f.company.value) return null;
+    var b = {
+      pid: state.pid, form: isC ? 'contact' : 'quiz', name: c.name || '', phone: c.phone, address: c.address || '', zip: c.zip || '',
+      loss_type: isC ? cform.loss_type.value : (state.loss_type || ''), claim_status: isC ? cform.claim_status.value : (state.claim_status || ''),
+      loss_timing: isC ? '' : (state.loss_timing || ''), page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
+    };
+    for (var k in state.track) b[k] = state.track[k];
+    return JSON.stringify(b);
+  }
+  function sendPartial(beacon) {
+    clearTimeout(ptimer);
+    var s = partialBody(); if (!s || s === lastPartial) return;
+    lastPartial = s;
+    if (beacon && navigator.sendBeacon) { try { if (navigator.sendBeacon('/api/partial', new Blob([s], { type: 'text/plain' }))) return; } catch (e) {} }
+    fetch('/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: s, keepalive: true }).catch(function () { lastPartial = ''; });
+  }
+  [['quiz', form], ['contact', cform]].forEach(function (pair) {
+    var f = pair[1]; if (!f) return;
+    ['name', 'phone', 'address'].forEach(function (k) {
+      if (!f[k]) return;
+      f[k].addEventListener('input', function () { remember(pair[0], f); clearTimeout(ptimer); ptimer = setTimeout(sendPartial, 4000); });
+      f[k].addEventListener('change', function () { remember(pair[0], f); sendPartial(); });
+    });
+  });
+  d.addEventListener('visibilitychange', function () { if (d.visibilityState === 'hidden') sendPartial(true); });
+  w.addEventListener('pagehide', function () { sendPartial(true); });
+  if (!TY) prefill();
 
   // Real thank you page at /thank-you. The lead event fires once here, after the redirect.
   if (TY) {

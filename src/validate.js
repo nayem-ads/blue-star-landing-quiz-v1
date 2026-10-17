@@ -51,4 +51,22 @@ function validateLead(b) {
   return { ok: Object.keys(errors).length === 0, errors, lead: out };
 }
 
-module.exports = { LABELS, validateLead };
+// Unfinished form: only a valid US phone is required. Everything else is kept if present.
+function validatePartial(b) {
+  let digits = String(b.phone || '').replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
+  if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) return null;
+  const out = { phone: `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` };
+  out.form = b.form === 'contact' ? 'contact' : 'quiz';
+  out.name = clip(b.name, 80).replace(/\s+/g, ' ') || null;
+  out.address = clip(b.address, 200).replace(/\s+/g, ' ') || null;
+  const zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
+  out.zip = zip.length === 5 ? zip : null;
+  for (const k of ['loss_type', 'claim_status', 'loss_timing']) out[k] = LABELS[k][b[k]] ? b[k] : null;
+  for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'page_variant']) out[k] = clip(b[k], 300) || null;
+  out.landing_url = clip(b.landing_url, 1000) || null;
+  out.referrer = clip(b.referrer, 1000) || null;
+  return out;
+}
+
+module.exports = { LABELS, validateLead, validatePartial };

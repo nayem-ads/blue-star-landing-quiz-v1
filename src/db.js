@@ -40,6 +40,19 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE leads ALTER COLUMN zip DROP NOT NULL;
 ALTER TABLE leads ALTER COLUMN claim_status DROP NOT NULL;
 ALTER TABLE leads ALTER COLUMN loss_timing DROP NOT NULL;
+CREATE TABLE IF NOT EXISTS partial_leads (
+  pid TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  status TEXT NOT NULL DEFAULT 'open',
+  form TEXT, name TEXT, phone TEXT NOT NULL, address TEXT, zip TEXT,
+  loss_type TEXT, claim_status TEXT, loss_timing TEXT, page_variant TEXT,
+  utm_source TEXT, utm_medium TEXT, utm_campaign TEXT, utm_term TEXT, utm_content TEXT,
+  gclid TEXT, gbraid TEXT, wbraid TEXT, fbclid TEXT,
+  landing_url TEXT, referrer TEXT, ip TEXT, user_agent TEXT
+);
+CREATE INDEX IF NOT EXISTS partial_leads_open_idx ON partial_leads (status, updated_at);
+CREATE INDEX IF NOT EXISTS partial_leads_phone_idx ON partial_leads (phone);
 `;
 
 const COLS = ['public_id','loss_type','claim_status','loss_timing','name','phone','zip','page_variant',
@@ -111,10 +124,72 @@ async function findRecent(phone) {
   return r.rows[0] ? r.rows[0].public_id : null;
 }
 
+// ---------- unfinished forms (partial leads) ----------
+// status: open -> converted (they sent the form) | alerted (team emailed) | alert_failed
+const PCOLS = ['form', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'page_variant',
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid',
+  'landing_url', 'referrer', 'ip', 'user_agent'];
+const PART = new Map(); // file mode only (local dev)
+
+async function upsertPartial(pid, p) {
+  if (!pool) {
+    const cur = PART.get(pid);
+    if (cur && cur.status !== 'open') return;
+    PART.set(pid, { ...(cur || { created_at: new Date() }), ...p, pid, status: 'open', updated_at: new Date() });
+    return;
+  }
+  const vals = [pid, ...PCOLS.map(c => p[c] ?? null)];
+  const ph = vals.map((_, i) => '$' + (i + 1)).join(',');
+  const set = PCOLS.map(c => `${c}=EXCLUDED.${c}`).join(',');
+  await pool.query(`INSERT INTO partial_leads (pid,${PCOLS.join(',')}) VALUES (${ph})
+    ON CONFLICT (pid) DO UPDATE SET ${set}, updated_at=now() WHERE partial_leads.status='open'`, vals);
+}
+
+async function convertPartials(phone) {
+  if (!pool) { for (const p of PART.values()) if (p.phone === phone && p.status === 'open') p.status = 'converted'; return; }
+  await pool.query("UPDATE partial_leads SET status='converted' WHERE phone=$1 AND status='open'", [phone]);
+}
+
+// Open partials untouched for `minutes`. Claims them (status 'alerting') so one alert goes out per partial.
+async function claimDuePartials(minutes) {
+  const cutoff = Date.now() - minutes * 60000;
+  if (!pool) {
+    const due = [...PART.values()].filter(p => p.status === 'open' && new Date(p.updated_at).getTime() <= cutoff);
+    due.forEach(p => { p.status = 'alerting'; });
+    return due;
+  }
+  const r = await pool.query(`UPDATE partial_leads SET status='alerting' WHERE pid IN (
+    SELECT pid FROM partial_leads WHERE status='open' AND updated_at <= now() - make_interval(secs => $1::float8 * 60) ORDER BY updated_at LIMIT 20
+  ) RETURNING *`, [minutes]);
+  return r.rows;
+}
+
+async function setPartialStatus(pid, status) {
+  if (!pool) { const p = PART.get(pid); if (p) p.status = status; return; }
+  await pool.query('UPDATE partial_leads SET status=$2 WHERE pid=$1', [pid, status]);
+}
+
+// Did this phone send a full lead in the last 24 hours?
+async function hasLead(phone) {
+  if (!pool) {
+    if (!fs.existsSync(FILE)) return false;
+    const day = Date.now() - 864e5;
+    return fs.readFileSync(FILE, 'utf8').split('\n').filter(Boolean).some(l => { try { const r = JSON.parse(l); return r.phone === phone && !r.is_spam && new Date(r.created_at).getTime() > day; } catch (e) { return false; } });
+  }
+  const r = await pool.query("SELECT 1 FROM leads WHERE phone=$1 AND is_spam=false AND created_at > now() - interval '24 hours' LIMIT 1", [phone]);
+  return r.rowCount > 0;
+}
+
+async function listPartials(limit = 5000) {
+  if (!pool) return [...PART.values()].sort((x, y) => new Date(y.updated_at) - new Date(x.updated_at));
+  const r = await pool.query('SELECT * FROM partial_leads ORDER BY updated_at DESC LIMIT $1', [limit]);
+  return r.rows;
+}
+
 async function ping() {
   if (!pool) return 'file';
   await pool.query('SELECT 1');
   return 'postgres';
 }
 
-module.exports = { init, findRecent, insertLead, setEmailStatus, setCallback, listLeads, ping };
+module.exports = { init, findRecent, insertLead, setEmailStatus, setCallback, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, hasLead, listPartials };

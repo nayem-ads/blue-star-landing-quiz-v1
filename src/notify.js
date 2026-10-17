@@ -93,4 +93,28 @@ async function notifyCallback(info, slot, publicId) {
   return sendFormSubmit(subject, rows);
 }
 
-module.exports = { notifyLead, notifyCallback, render };
+// Someone typed a valid phone number but never pressed send.
+async function notifyPartial(p) {
+  const telDigits = String(p.phone).replace(/\D/g, '');
+  const rows = [
+    ['Status', 'Started the form but did not press send. They have not agreed to calls or texts yet, so call by hand only.'],
+    ['Name', p.name], ['Phone', p.phone, `tel:+1${telDigits}`],
+    ['Form', p.form === 'contact' ? 'Contact form (bottom of page)' : 'Quiz'],
+    ['Property address', p.address], ['ZIP', p.zip],
+    ['What happened', LABELS.loss_type[p.loss_type] || p.loss_type],
+    ['Claim status', LABELS.claim_status[p.claim_status] || p.claim_status],
+    ['When', LABELS.loss_timing[p.loss_timing] || p.loss_timing],
+    ['Last typed', ptTime(p.updated_at)],
+    ['Source', [p.utm_source, p.utm_medium, p.utm_campaign].filter(Boolean).join(' / ') || (p.gclid ? 'google (gclid)' : p.fbclid ? 'meta (fbclid)' : 'direct or unknown')],
+    ['Landing URL', p.landing_url],
+    ['Partial ID', p.pid],
+  ].filter(r => r[1]);
+  const subject = `Unfinished form: ${p.name || 'no name'} ${p.phone} did not press send`;
+  const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#0E1630"><p style="margin:0 0 12px"><b>Someone started the Quiz First form and left without sending it.</b></p>
+<table cellpadding="8" style="border-collapse:collapse;border:1px solid #D9DFEC">${rows.map(([k, v, href]) =>
+    `<tr><td style="background:#F4F6FB;border:1px solid #D9DFEC;font-weight:bold">${esc(k)}</td><td style="border:1px solid #D9DFEC">${href ? `<a href="${esc(href)}">${esc(v)}</a>` : esc(v)}</td></tr>`).join('')}</table></div>`;
+  if (process.env.RESEND_API_KEY) return sendResend(subject, html, rows.map(r => `${r[0]}: ${r[1]}`).join('\n'));
+  return sendFormSubmit(subject, rows.map(r => [r[0], r[1]]));
+}
+
+module.exports = { notifyLead, notifyCallback, notifyPartial, render };
