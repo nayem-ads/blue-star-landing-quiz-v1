@@ -4,8 +4,8 @@ const fs = require('fs');
 const express = require('express');
 const compression = require('compression');
 const db = require('./src/db');
-const { validateLead } = require('./src/validate');
-const { notifyLead, notifyCallback } = require('./src/notify');
+const { validateLead, validatePartial } = require('./src/validate');
+const { notifyLead, notifyCallback, notifyPartial } = require('./src/notify');
 
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(__dirname, 'public');
@@ -115,7 +115,7 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
 
   if (!spam) {
     const dup = await db.findRecent(lead.phone).catch(() => null);
-    if (dup) return reply(200, { ok: true, id: dup, first_name: lead.name.split(' ')[0], duplicate: true });
+    if (dup) { db.convertPartials(lead.phone).catch(() => {}); return reply(200, { ok: true, id: dup, first_name: lead.name.split(' ')[0], duplicate: true }); }
   }
 
   let saved;
@@ -126,6 +126,7 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
     saved = { ...lead, public_id: 'unsaved-' + Date.now() };
   }
 
+  if (!spam) await db.convertPartials(lead.phone).catch(e => console.error('[partial] convert', e.message));
   if (!spam) {
     try {
       const status = await notifyLead(saved).catch(async () => { await new Promise(r => setTimeout(r, 1500)); return notifyLead(saved); });
@@ -158,12 +159,64 @@ app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, r
   }
 });
 
+// ---------- unfinished forms: saved while typing, alert after PARTIAL_DELAY_MIN minutes idle ----------
+const partialHits = new Map();
+function partialLimited(ip) {
+  const now = Date.now(), arr = (partialHits.get(ip) || []).filter(t => now - t < 10 * 60 * 1000);
+  arr.push(now); partialHits.set(ip, arr);
+  if (partialHits.size > 5000) partialHits.clear();
+  return arr.length > 40;
+}
+app.post('/api/partial', express.text({ type: () => true, limit: '8kb' }), async (req, res) => {
+  let b;
+  try { b = typeof req.body === 'string' && req.body ? JSON.parse(req.body) : {}; } catch (e) { return res.status(400).json({ ok: false }); }
+  const pid = String(b.pid || '').slice(0, 64);
+  if (!/^[\w-]{8,64}$/.test(pid)) return res.status(400).json({ ok: false });
+  if (b.company) return res.json({ ok: true });
+  const ip = clientIp(req);
+  if (partialLimited(ip)) return res.status(429).json({ ok: false });
+  const p = validatePartial(b);
+  if (!p) return res.status(400).json({ ok: false });
+  p.ip = ip; p.user_agent = String(req.get('user-agent') || '').slice(0, 400);
+  try { await db.upsertPartial(pid, p); res.json({ ok: true }); }
+  catch (e) { console.error('[partial]', e.message); res.status(500).json({ ok: false }); }
+});
+
+const PARTIAL_DELAY_MIN = Math.max(0, Number(process.env.PARTIAL_DELAY_MIN ?? 5));
+async function sweepPartials() {
+  if (process.env.PARTIAL_ALERTS === 'off') return;
+  let due = [];
+  try { due = await db.claimDuePartials(PARTIAL_DELAY_MIN); } catch (e) { return console.error('[partial] sweep', e.message); }
+  for (const p of due) {
+    try {
+      if (await db.hasLead(p.phone)) { await db.setPartialStatus(p.pid, 'converted'); continue; }
+      await notifyPartial(p);
+      await db.setPartialStatus(p.pid, 'alerted');
+    } catch (e) {
+      console.error('[partial] alert failed', e.message);
+      await db.setPartialStatus(p.pid, 'alert_failed').catch(() => {});
+    }
+  }
+}
+setInterval(sweepPartials, Number(process.env.PARTIAL_SWEEP_MS) || 60000).unref();
+
+// CSV of unfinished forms: /admin/partials.csv?key=YOUR_ADMIN_KEY
+app.get('/admin/partials.csv', async (req, res) => {
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) return res.status(404).send('Not found');
+  const rows = await db.listPartials();
+  const cols = ['updated_at', 'status', 'form', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'utm_source', 'utm_medium', 'utm_campaign', 'gclid', 'fbclid', 'landing_url', 'pid'];
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="bluestar-unfinished-forms.csv"', 'Cache-Control': 'no-store' });
+  res.send([cols.join(','), ...rows.map(r => cols.map(c => q(r[c] instanceof Date ? r[c].toISOString() : r[c])).join(','))].join('\n'));
+});
+
 // ---------- CSV export: /admin/leads.csv?key=YOUR_ADMIN_KEY ----------
 app.get('/admin/leads.csv', async (req, res) => {
   const key = process.env.ADMIN_KEY;
   if (!key || req.query.key !== key) return res.status(404).send('Not found');
   const rows = await db.listLeads();
-  const cols = ['created_at', 'name', 'phone', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'is_spam', 'public_id'];
+  const cols = ['created_at', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'is_spam', 'public_id'];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="bluestar-leads.csv"', 'Cache-Control': 'no-store' });
   res.send([cols.join(','), ...rows.map(r => cols.map(c => q(r[c] instanceof Date ? r[c].toISOString() : r[c])).join(','))].join('\n'));
