@@ -445,7 +445,7 @@
       ['name', 'phone', 'address'].forEach(function (k) { if (other[k] && c[k]) other[k].value = c[k]; });
       if (other.zip && c.zip) other.zip.value = c.zip;
       var p = other.querySelector('input[type="tel"]');
-      if (p && p.value) { try { p.dispatchEvent(new Event('input')); } catch (e) {} }
+      if (p && p.value) { var x = digitsOf(p.value); p.value = x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x; }
     }
   }
   function prefill() {
