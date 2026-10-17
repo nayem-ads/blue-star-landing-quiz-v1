@@ -51,7 +51,7 @@
     w.scrollTo(0, 0);
     if (step > 1) {
       markSelected();
-      if (step === 4) renderAnswers();
+      if (step === 4) { renderAnswers(); prefill(); }
       if (step === 5) renderSlots();
       var h = d.querySelector('.screen.on h2');
       if (h) setTimeout(function () { h.focus({ preventScroll: true }); }, 60);
@@ -440,6 +440,13 @@
     var c = state.contact || {};
     ['name', 'phone', 'address', 'zip'].forEach(function (k) { if (f[k]) c[k] = f[k].value; });
     c.form = which; state.contact = c; save();
+    var other = which === 'contact' ? form : cform;
+    if (other) {
+      ['name', 'phone', 'address'].forEach(function (k) { if (other[k] && c[k]) other[k].value = c[k]; });
+      if (other.zip && c.zip) other.zip.value = c.zip;
+      var p = other.querySelector('input[type="tel"]');
+      if (p && p.value) { try { p.dispatchEvent(new Event('input')); } catch (e) {} }
+    }
   }
   function prefill() {
     var c = state.contact; if (!c) return;
