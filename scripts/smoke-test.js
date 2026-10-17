@@ -9,7 +9,7 @@ const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6'
 (async () => {
   let r = await fetch(BASE + '/');
   let t = await r.text();
-  ok(r.status === 200 && t.includes('Get a free second opinion'), 'home renders default headline');
+  ok(r.status === 200 && t.includes('Home or business damaged?'), 'home renders default headline');
   ok(t.includes('name="viewport"') && t.includes('viewport-fit=cover'), 'viewport meta present');
   ok(t.includes('noindex'), 'noindex by default');
   t = await (await fetch(BASE + '/?loss=denied')).text();
@@ -70,6 +70,13 @@ const good = { loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6'
     ok(/"converted"/.test(row('Then Sent')), 'unfinished form marked converted after full lead');
     ok(/"(alerted|alert_failed)"/.test(row('Partial Only')), 'abandoned form picked up for an alert (' + (row('Partial Only').split(',')[1] || 'missing') + ')');
   }
+
+  r = await post('/api/lead', { ...good, loss_type: 'storm', name: 'Storm Lead', phone: '(916) 555-0193' }, { 'X-Real-IP': '10.0.2.1' });
+  ok(r.ok, 'storm loss type accepted');
+  t = await (await fetch(BASE + '/?loss=storm')).text(); ok(t.includes('storm damage claim'), 'storm headline variant');
+  t = await (await fetch(BASE + '/')).text();
+  const vis = t.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<svg[\s\S]*?<\/svg>/g, '');
+  ok(!/916|507-1005|Start my free review|builder|developer|Email \(optional\)|—|–/.test(vis) && (t.match(/tel:\+18889712524/g) || []).length >= 8 && !t.includes('tel:+1916'), 'copy v2: toll free only, no old CTA, no dashes');
 
   let last; for (let i = 0; i < 7; i++) last = await post('/api/lead', good, { 'X-Real-IP': '10.0.0.9' });
   ok(last.status === 429, 'rate limit after 6 per 10 minutes');

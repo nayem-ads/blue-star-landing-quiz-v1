@@ -1,7 +1,7 @@
 'use strict';
 // Allowed answers. Keys are what the page sends; labels are what the email shows.
 const LABELS = {
-  loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', denied: 'Claim denied', other: 'Something else' },
+  loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', storm: 'Storm or a fallen tree', denied: 'Claim denied', other: 'Something else' },
   claim_status: { not_filed: 'Haven’t filed yet', waiting: 'Filed, still waiting', low_offer: 'Got an offer, it looks low', denied: 'Denied, in full or in part' },
   loss_timing: { month: 'In the last month', m1_6: '1 to 6 months ago', m6_12: '6 to 12 months ago', over_year: 'Over a year ago' },
 };

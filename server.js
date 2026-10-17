@@ -27,11 +27,12 @@ app.use((req, res, next) => {
 
 // ---------- headline variants: match the ad group with ?loss=fire|smoke|water|denied ----------
 const HEADLINES = {
-  default: 'Your insurance offer looks too low. Get a free second opinion.',
+  default: 'Home or business damaged?',
   fire: 'Your fire claim offer looks too low. Get a free second opinion.',
   smoke: 'Insurance says your smoke damage only needs a light clean. Get a second opinion.',
   water: 'Your water damage claim came back low. Get a free second opinion.',
   denied: 'Your claim was denied. That isn’t always the final answer.',
+  storm: 'Your storm damage claim came back low. Get a free second opinion.',
 };
 // app.js is versioned by content hash so a deploy can never pair new HTML with a cached old script.
 const APP_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'app.js'))).digest('hex').slice(0, 10);
@@ -102,7 +103,7 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
   if (plain && !b.source) b.source = 'contact';
   const reply = (code, json) => plain ? res.redirect(303, json.ok ? '/thanks' : '/#contact') : res.status(code).json(json);
   const ip = clientIp(req);
-  if (limited(ip)) return reply(429, { ok: false, error: 'Too many attempts. Please call (916) 507-1005.' });
+  if (limited(ip)) return reply(429, { ok: false, error: 'Too many attempts. Please call toll free (888) 971-2524.' });
 
   const { ok, errors, lead } = validateLead(b);
   if (!ok) return reply(400, { ok: false, errors });

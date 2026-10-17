@@ -3,7 +3,7 @@
   var d = document, w = window, body = d.body;
   var KEY = 'bs_quiz_v1';
   var LABEL = {
-    loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', denied: 'Claim denied', other: 'Something else' },
+    loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', storm: 'Storm or a fallen tree', denied: 'Claim denied', other: 'Something else' },
     claim_status: { not_filed: 'Not filed yet', waiting: 'Still waiting', low_offer: 'Offer looks low', denied: 'Denied' },
     loss_timing: { month: 'Last month', m1_6: '1 to 6 months ago', m6_12: '6 to 12 months ago', over_year: 'Over a year ago' }
   };
@@ -96,7 +96,12 @@
   var sticky = d.getElementById('sticky'), quiz = d.getElementById('quiz');
   if ('IntersectionObserver' in w && quiz) {
     new IntersectionObserver(function (en) { sticky.classList.toggle('show', !en[0].isIntersecting && en[0].boundingClientRect.top < 0); }).observe(quiz);
+    // Hide it over the contact form, and whenever a field has focus (the phone keyboard pushes it over the inputs).
+    var ctSec = d.getElementById('contact');
+    if (ctSec) new IntersectionObserver(function (en) { sticky.classList.toggle('off', en[0].isIntersecting); }).observe(ctSec);
   }
+  d.addEventListener('focusin', function (e) { if (e.target.matches && e.target.matches('input,select,textarea')) sticky.classList.add('typing'); });
+  d.addEventListener('focusout', function () { setTimeout(function () { var el = d.activeElement; if (!el || !el.matches || !el.matches('input,select,textarea')) sticky.classList.remove('typing'); }, 50); });
   function goQuiz() {
     w.scrollTo({ top: 0, behavior: 'smooth' });
     var first = quiz.querySelector('.tile'); if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 400);
@@ -273,7 +278,7 @@
           else throw new Error((j && j.error) || 'error');
         })
         .catch(function (err) {
-          cerr.textContent = (err && err.message && err.message !== 'error' && err.message.indexOf('Failed') === -1) ? err.message : 'We couldn’t send that. Please try again or call (916) 507-1005.';
+          cerr.textContent = (err && err.message && err.message !== 'error' && err.message.indexOf('Failed') === -1) ? err.message : 'We couldn’t send that. Please try again or call toll free (888) 971-2524.';
           cerr.classList.add('show');
         })
         .finally(function () { cbtn.disabled = false; cbtn.innerHTML = label; });
@@ -338,7 +343,7 @@
         }
       })
       .catch(function (err) {
-        ferr.textContent = (err && err.message && err.message !== 'error' && err.message.indexOf('Failed') === -1) ? err.message : 'We couldn’t send that. Please try again or call (916) 507-1005.';
+        ferr.textContent = (err && err.message && err.message !== 'error' && err.message.indexOf('Failed') === -1) ? err.message : 'We couldn’t send that. Please try again or call toll free (888) 971-2524.';
         ferr.classList.add('show');
       })
       .finally(function () { btn.disabled = false; btn.textContent = 'Get my free review'; });
@@ -426,7 +431,7 @@
         dl('callback_booked', { slot: picks.join('; '), slot_count: picks.length });
         renderSlots();
       })
-      .catch(function () { slotMsg = 'We couldn’t save that. Please try again or call (916) 507-1005.'; slotBad = true; renderSlots(); });
+      .catch(function () { slotMsg = 'We couldn’t save that. Please try again or call toll free (888) 971-2524.'; slotBad = true; renderSlots(); });
   }
   var slotSave = d.getElementById('slot-save');
   if (slotSave) slotSave.addEventListener('click', saveSlots);
