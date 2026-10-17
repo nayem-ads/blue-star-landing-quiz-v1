@@ -247,6 +247,7 @@ footer .legal{display:flex;justify-content:space-between;gap:12px;margin-top:24p
 /* sticky bar */
 .sticky{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:10px;padding:12px 16px calc(12px + var(--sab));background:var(--white);box-shadow:0 -6px 24px rgba(8,16,51,.12);transform:translateY(110%);transition:transform .25s ease}
 .sticky.show{transform:none}
+.sticky.off,.sticky.typing{transform:translateY(110%)}
 .sticky .btn{min-height:50px;font-size:15px;padding:0 16px}
 body.funnel .sticky{display:none}
 /* funnel screens */
@@ -348,6 +349,41 @@ body.ty .logo-link{display:inline-flex}
  .hero{padding:12px 0 20px}.hero .wrap{gap:10px}h1{font-size:27px;margin-top:8px}.sub{font-size:14.5px;margin-top:8px}
  .qbody{padding:10px 12px 12px}.qhead{padding:8px 14px}.q{margin:8px 0 8px;font-size:19px}.tile{min-height:86px;padding:10px;gap:6px}.tile .t-ic{width:34px;height:34px}
 }
+/* copy v2 */
+.hero .wrap>*,.tiles>*{min-width:0}
+h1{text-wrap:balance}
+.sub{text-wrap:pretty}
+.sub-b{margin-top:10px;font:700 15.5px/1.4 var(--fb);color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.chips li{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:4px 10px 4px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);font:600 12.5px/1.25 var(--fb);color:var(--ink)}
+.chips .ic{width:14px;height:14px;color:var(--green);flex:none}
+@media (min-width:900px){.chips{gap:8px;margin-top:14px}.chips li{font-size:13.5px;padding:5px 12px 5px 10px}}
+.qhead.note{align-items:flex-start;font:500 12.5px/1.4 var(--fb)}
+.qhead.note .ic{margin-top:1px;flex:none}
+.tiles{grid-template-columns:1fr 1fr;gap:8px}
+.tile{flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:58px;padding:9px 10px}
+.tile .t-top{flex:none}
+.tile .arr{display:none}
+.tile .t-ic{width:36px;height:36px;border-radius:18px}
+.tile b{font-size:14.5px}
+.tile[data-loss=storm] .t-ic{background:#E3ECF8;color:#2B5797}
+.tile[data-loss=other] .t-ic{background:#EEF1F6;color:#5B6478}
+.qcard .tile:nth-child(5){animation-delay:.49s}.qcard .tile:nth-child(6){animation-delay:.55s}
+.bline{margin-top:10px;font:700 15px/1.45 var(--fb);color:var(--ink)}
+.call-pill .pl{display:flex;flex-direction:column;line-height:1.1}
+.call-pill .pl small{font:600 10px/1.1 var(--fb);letter-spacing:.05em;text-transform:uppercase;opacity:.75}
+.call-pill .pl span{font-size:14.5px}
+.band .tl{margin-top:12px;font-weight:600;color:#fff}
+@media (max-width:359px){.logo{width:100px}.call-pill{padding:0 10px}.call-pill .pl span{font-size:13.5px}.sticky .btn{padding:0 12px;font-size:14px}}
+@media (min-width:900px){
+ .tiles{grid-template-columns:1fr 1fr 1fr;gap:10px}
+ .tile{flex-direction:column;align-items:flex-start;justify-content:space-between;min-height:112px;padding:14px}
+ .tile .t-ic{width:40px;height:40px;border-radius:20px}
+ .tile b{font-size:16px}
+ .qhead.note{font-size:13.5px}
+ .sub-b{font-size:18px}
+}
+@media (max-width:899px) and (max-height:720px){.tile{min-height:52px;padding:7px 9px}.chips{margin-top:8px}.sub-b{margin-top:8px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 <script src="/app.js" defer></script>
@@ -363,7 +399,7 @@ body.ty .logo-link{display:inline-flex}
  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.5 3 2.5 3.5C12 9.5 11 6 12 3z"/></symbol>
  <symbol id="i-smoke" viewBox="0 0 24 24"><path d="M4 15c2-2 4 0 6-2s4 0 6-2 3 0 4-1M4 19c2-2 4 0 6-2s4 0 6-2 3 0 4-1M8 9c1-2 3-1 4-3s3-1 4-3"/></symbol>
- <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+ <symbol id="i-storm" viewBox="0 0 24 24"><path d="M7 16.5A4 4 0 1 1 7.8 8.6 5.5 5.5 0 0 1 18.4 9.6 3.5 3.5 0 0 1 17.5 16.5"/><path d="M12.5 13l-2 3.5h3L11.5 20"/></symbol><symbol id="i-more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></symbol><symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5"/></symbol>
  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
@@ -378,8 +414,8 @@ body.ty .logo-link{display:inline-flex}
   <button class="back" type="button" id="back"><svg class="ic"><use href="#i-back"/></svg>Back</button>
   <a class="logo-link" href="/"><img class="logo" src="/logo.svg" width="181" height="40" alt="Blue Star Adjusters"><span class="lic-m">CA Lic. 6015234</span></a>
   <span class="sp"></span>
-  <span class="lic">CA DOI License No. 6015234 · Mon to Fri, 9 AM to 5 PM PT</span>
-  <a class="call-pill" href="tel:+19165071005" data-call="header"><svg class="ic" style="width:18px;height:18px"><use href="#i-phone"/></svg><span class="lbl">Call</span><span class="num">(916) 507-1005</span></a>
+  <span class="lic">Licensed California public adjuster · CA DOI License No. 6015234</span>
+  <a class="call-pill" href="tel:+18889712524" data-call="header" aria-label="Call toll free (888) 971-2524"><svg class="ic" style="width:18px;height:18px"><use href="#i-phone"/></svg><span class="pl"><small>Toll free</small><span>(888) 971-2524</span></span></a>
  </div>
 </header>
 
@@ -387,14 +423,16 @@ body.ty .logo-link{display:inline-flex}
  <section class="hero" aria-labelledby="h1">
   <div class="wrap">
    <div class="hero-copy rise">
-    <p class="pill"><span class="dot" aria-hidden="true"></span>Free review by a licensed public adjuster</p>
+    <p class="pill"><span class="dot" aria-hidden="true"></span>For homeowners and business owners with an insurance claim</p>
     <h1 id="h1">{{H1}}</h1>
-    <p class="sub">Answer 4 quick questions. A licensed public adjuster reviews your claim and calls you back.</p>
+    <p class="sub">A licensed public adjuster works for you, not the insurance company. We find what your insurer’s estimate missed after fire, smoke, water or storm damage. Free review, takes about a minute.</p>
+    <p class="sub-b">Before you accept their final number, get it checked.</p>
+    <ul class="chips"><li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>No upfront cost</li><li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Takes about a minute</li><li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>We represent you, not the insurer</li></ul>
    </div>
 
    <div class="quiz-col">
     <div class="qcard rise" id="quiz">
-     <div class="qhead"><svg class="ic ic-s" aria-hidden="true"><use href="#i-clock"/></svg>Takes about a minute<span class="tag">No obligation</span></div>
+     <div class="qhead note"><svg class="ic ic-s" aria-hidden="true"><use href="#i-phone"/></svg><span>A licensed adjuster calls you back, usually within one business day. No documents needed to start.</span></div>
      <div class="qbody">
       <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 1 of 4</span><span>25%</span></div><div class="bar"><i id="bar1" style="width:0"></i></div></div>
       <h2 class="q" id="q1">What happened?</h2>
@@ -402,9 +440,10 @@ body.ty .logo-link{display:inline-flex}
        <button type="button" class="tile" data-loss="fire"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-flame"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Fire</b></button>
        <button type="button" class="tile" data-loss="smoke"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-smoke"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Smoke damage</b></button>
        <button type="button" class="tile" data-loss="water"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-drop"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Water or a leak</b></button>
+       <button type="button" class="tile" data-loss="storm"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-storm"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Storm or a fallen tree</b></button>
        <button type="button" class="tile" data-loss="denied"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-doc"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Claim denied</b></button>
+       <button type="button" class="tile" data-loss="other"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-more"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Something else</b></button>
       </div>
-      <button type="button" class="linkbtn" data-loss="other">Something else</button>
      </div>
     </div>
     <p class="result"><svg class="ic ic-s" aria-hidden="true"><use href="#i-check"/></svg><span>Smoke damage: offered $17,000. Settled for <b>about $1.1 million.</b></span></p>
@@ -420,9 +459,9 @@ body.ty .logo-link{display:inline-flex}
    <div class="proof-col">
     <figure class="photo r1610" style="margin:0">
      <img src="/img/wood-house-720.webp" srcset="/img/wood-house-720.webp 720w, /img/wood-house-1200.webp 1200w" sizes="(min-width:900px) 600px, 100vw" width="720" height="540" alt="A house and car destroyed by fire, photographed on a site visit" decoding="async">
-     <figcaption class="cap">Every line of the estimate checked against what was built.</figcaption>
+     <figcaption class="cap">Every line of the estimate checked against the damage we measured.</figcaption>
     </figure>
-    <div class="mchip"><img src="/img/mike-176.webp" width="52" height="52" alt="Michael Rapport" loading="lazy" decoding="async"><p><b>Michael Rapport, Founding Principal</b><span>Blue Star Adjusters. CA DOI License No. 6015234</span></p></div>
+    <div class="mchip"><img src="/img/mike-176.webp" width="52" height="52" alt="Michael Rapport" loading="lazy" decoding="async"><p><b>Michael Rapport, Founding Principal</b><span>A senior adjuster leads every claim, from the first call to the final settlement.</span></p></div>
     <div class="logos" data-slider>
      <p class="lbl">Member and community</p>
      <div class="ltrack">
@@ -432,9 +471,9 @@ body.ty .logo-link{display:inline-flex}
      <div class="ldots" aria-hidden="true"></div>
     </div>
     <div class="cta">
-     <button type="button" class="btn js-start" data-cta="hero">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+     <button type="button" class="btn js-start" data-cta="hero">Check my claim now<svg class="ic"><use href="#i-arrow"/></svg></button>
      <small>Takes about a minute. No obligation.</small>
-     <a class="call-link" href="tel:+19165071005" data-call="hero"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call (916) 507-1005</a>
+     <a class="call-link" href="tel:+18889712524" data-call="hero"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call toll free now (888) 971-2524</a>
     </div>
    </div>
   </div>
@@ -450,14 +489,15 @@ body.ty .logo-link{display:inline-flex}
    </figure>
    <div class="rescards">
     <div class="res"><p class="lab"><span><svg class="ic"><use href="#i-search"/></svg></span>Smoke damage</p><p class="off">Offered <b>$17,000</b></p><p class="st">Settled</p><p class="to">About $1.1M</p><div class="bars" aria-hidden="true"><i style="--w:2%"></i><i style="--w:100%"></i></div></div>
-    <div class="res"><p class="lab"><span><svg class="ic"><use href="#i-building"/></svg></span>Estate fire</p><p class="off">Owner’s own recovery <b>$6 million</b></p><p class="st">Settled</p><p class="to">$11M <small>structure plus</small><br>$5.2M <small>contents</small></p></div>
+    <div class="res"><p class="lab"><span><svg class="ic"><use href="#i-building"/></svg></span>Estate fire</p><p class="off"><span>Structure plus contents</span></p><p class="st">Settled</p><p class="to">$11M <small>structure plus</small><br>$5.2M <small>contents</small></p></div>
     <div class="res"><p class="lab"><span><svg class="ic"><use href="#i-home"/></svg></span>Los Angeles house fire</p><p class="off">Offered <b>$38,000</b></p><p class="st">Settled</p><p class="to">$276,000</p><div class="bars" aria-hidden="true"><i style="--w:14%"></i><i style="--w:100%"></i></div></div>
    </div>
    <p class="fine" style="margin-top:14px">Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</p>
+   <p class="bline">Money left out of the estimate stays with the insurer unless someone proves it.</p>
    <div class="cta ctarow" style="margin-top:22px">
-    <button type="button" class="btn js-start" data-cta="results">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+    <button type="button" class="btn js-start" data-cta="results">Check my claim now<svg class="ic"><use href="#i-arrow"/></svg></button>
     <small>Takes about a minute. No obligation.</small>
-    <a class="call-link" href="tel:+19165071005" data-call="results"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call (916) 507-1005</a>
+    <a class="call-link" href="tel:+18889712524" data-call="results"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call toll free now (888) 971-2524</a>
    </div>
   </div>
  </section>
@@ -474,7 +514,7 @@ body.ty .logo-link{display:inline-flex}
    <div>
     <p class="eb">Line by line</p>
     <h2 id="est-h">What the first estimate misses.</h2>
-    <p class="lead">The carrier writes the first estimate. We read it line by line.</p>
+    <p class="lead">The carrier writes the first estimate. We check it line by line against what your home actually needs.</p>
     <ol class="missed">
      <li><span>1</span>Smoke inside the walls and the duct work, not only on the paint.</li>
      <li><span>2</span>Code upgrades the city requires before it signs off the rebuild.</li>
@@ -483,7 +523,7 @@ body.ty .logo-link{display:inline-flex}
      <li><span>5</span>Recoverable depreciation you can claim back once the work is done.</li>
     </ol>
     <div class="cta">
-     <button type="button" class="btn js-start" data-cta="estimate">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+     <button type="button" class="btn js-start" data-cta="estimate">Check my claim now<svg class="ic"><use href="#i-arrow"/></svg></button>
      <small>Takes about a minute. No obligation.</small>
     </div>
    </div>
@@ -503,7 +543,7 @@ body.ty .logo-link{display:inline-flex}
    </div>
    <div class="founder">
     <div class="id"><img src="/img/mike-176.webp" width="96" height="96" alt="Michael Rapport, Founding Principal" loading="lazy" decoding="async"><p><b>Michael Rapport</b><span>Founding Principal</span></p></div>
-    <p>Every claim review is read by a licensed public adjuster. We represent the insured only.</p>
+    <p>A senior adjuster leads every claim, from the first call to the final settlement.</p>
     <p class="lic2"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>Blue Star Adjusters. CA DOI License No. 6015234.</p>
    </div>
   </div>
@@ -526,15 +566,15 @@ body.ty .logo-link{display:inline-flex}
       </ul>
      </div>
      <div class="cta vetcta">
-      <button type="button" class="btn js-start" data-cta="faq">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+      <button type="button" class="btn js-start" data-cta="faq">Check my claim now<svg class="ic"><use href="#i-arrow"/></svg></button>
       <small>Takes about a minute. No obligation.</small>
-      <a class="call-link" href="tel:+19165071005" data-call="faq"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call (916) 507-1005</a>
+      <a class="call-link" href="tel:+18889712524" data-call="faq"><svg class="ic ic-s"><use href="#i-phone"/></svg>Or call toll free now (888) 971-2524</a>
      </div>
     </div>
     <div>
      <details open><summary>How do I know you’re legitimate?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Check our license, 6015234, on the California Department of Insurance website. Our fee and your right to cancel are written into the contract before any work starts.</p></details>
-     <details><summary>Will this slow my claim down?<svg class="ic"><use href="#i-chev"/></svg></summary><p>We have a strong financial incentive to expedite settlement on your behalf.</p></details>
-     <details><summary>Will my insurer hold it against me?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Carriers work with public adjusters every day. The difference is what gets measured.</p></details>
+     <details><summary>Will this slow my claim down?<svg class="ic"><use href="#i-chev"/></svg></summary><p>No. We’re paid a percentage of what we recover, so we want your claim closed quickly and in full.</p></details>
+     <details><summary>Will my insurer hold it against me?<svg class="ic"><use href="#i-chev"/></svg></summary><p>No. Hiring a licensed public adjuster is your right in California. Your policy stays the same. We handle the paperwork and the meetings with their adjuster.</p></details>
      <details><summary>What does it cost?<svg class="ic"><use href="#i-chev"/></svg></summary><p>No upfront cost. We’re paid a percentage of what we recover, agreed in writing first.</p></details>
      <details><summary>I already cashed a check. Is it too late?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.</p></details>
      <details><summary>Do I still pick my own contractor?<svg class="ic"><use href="#i-chev"/></svg></summary><p>Yes. We don’t arrange repairs. We price the work your contractor will do.</p></details>
@@ -547,13 +587,12 @@ body.ty .logo-link{display:inline-flex}
  <section class="band" aria-labelledby="band-h">
   <div class="wrap">
    <div>
-    <h2 id="band-h">Call before the carrier sets the narrative.</h2>
-    <p style="margin-top:12px">Your insurance company has an adjuster protecting their interests. You have the right to one too.</p>
+    <h2 id="band-h">Your insurer has an adjuster. So should you.</h2>
+    <p class="tl">Time limits on a claim can count from the date of loss. Get it checked now while the damage and the paperwork are fresh.</p>
    </div>
    <div class="btns">
-    <button type="button" class="btn light js-start" data-cta="band">Start my free review</button>
-    <a class="btn outline" href="tel:+19165071005" data-call="band"><svg class="ic"><use href="#i-phone"/></svg>Call (916) 507-1005</a>
-    <small>Monday to Friday, 9 AM to 5 PM Pacific.</small>
+    <button type="button" class="btn light js-start" data-cta="band">Check my claim now</button>
+    <a class="btn outline" href="tel:+18889712524" data-call="band"><svg class="ic"><use href="#i-phone"/></svg>Call toll free now (888) 971-2524</a>
    </div>
   </div>
  </section>
@@ -573,17 +612,16 @@ body.ty .logo-link{display:inline-flex}
      </div>
      <div class="ldots" aria-hidden="true"></div>
     </div>
-    <p class="callrow"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg>Rather talk now? Call <a href="tel:+19165071005" data-call="contact">(916) 507-1005</a></p>
-    <p class="hours">Monday to Friday, 9 AM to 5 PM Pacific</p>
+    <p class="callrow"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg>Rather talk now? Call toll free <a href="tel:+18889712524" data-call="contact">(888) 971-2524</a></p>
    </div>
    <div class="form" id="cform-wrap">
     <p class="fhead"><svg class="ic" aria-hidden="true"><use href="#i-shield"/></svg>Free review. A licensed adjuster reads every form.</p>
     <form id="cform" method="post" action="/api/lead" novalidate>
      <div class="formerr" id="cformerr" role="alert"></div>
      <div class="field" data-cf="name"><label for="c-name">Full name</label><input id="c-name" name="name" autocomplete="name" autocapitalize="words" placeholder="First and last name" required><span class="err">Please enter your name.</span></div>
-     <div class="field" data-cf="phone"><label for="c-phone">Mobile number</label><input id="c-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(916) 555 0100" required><span class="help">So a licensed adjuster can call you about this claim.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
+     <div class="field" data-cf="phone"><label for="c-phone">Mobile number</label><input id="c-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="(415) 555 0142" required><span class="help">So a licensed adjuster can call you about this claim.</span><span class="err">Please enter a 10 digit US mobile number.</span></div>
      <div class="field" data-cf="address"><label for="c-address">Property address</label><div class="ac-box"><input id="c-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" placeholder="Start typing your street address" required minlength="6" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="c-address-list" aria-describedby="c-address-help"><ul class="ac-list" id="c-address-list" role="listbox" aria-label="Address suggestions" hidden></ul></div><input type="hidden" name="zip" value=""><span class="help" id="c-address-help">Where the damage happened. Pick it from the list or type it in full.</span><span class="err">Please enter the property address with the street number.</span></div>
-     <div class="field"><label for="c-loss">What happened</label><select id="c-loss" name="loss_type"><option value="fire">Fire</option><option value="smoke">Smoke damage</option><option value="water">Water or a leak</option><option value="denied">Claim denied</option><option value="other">Something else</option></select></div>
+     <div class="field"><label for="c-loss">What happened</label><select id="c-loss" name="loss_type"><option value="fire">Fire</option><option value="smoke">Smoke damage</option><option value="water">Water or a leak</option><option value="storm">Storm or a fallen tree</option><option value="denied">Claim denied</option><option value="other">Something else</option></select></div>
      <div class="field"><label for="c-status">Where the claim stands (optional)</label><select id="c-status" name="claim_status"><option value="">Choose one</option><option value="not_filed">Haven’t filed yet</option><option value="waiting">Filed, still waiting</option><option value="low_offer">Got an offer, it looks low</option><option value="denied">Denied, in full or in part</option></select></div>
      <div class="field"><label for="c-notes">Anything we should know (optional)</label><textarea id="c-notes" name="notes" maxlength="1000" placeholder="Dates, letters, what was damaged"></textarea></div>
      <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
@@ -593,9 +631,9 @@ body.ty .logo-link{display:inline-flex}
     </form>
     <div class="sent" role="status">
      <div class="done-ic" style="margin:0 auto"><svg class="ic" style="width:28px;height:28px"><use href="#i-check"/></svg></div>
-     <h3>Got it<span id="c-fname"></span>.</h3>
-     <p>A licensed public adjuster reads your details and calls you from (916) 507-1005 during office hours, Monday to Friday, 9 AM to 5 PM Pacific.</p>
-     <a class="save" href="tel:+19165071005" data-call="contact-sent"><svg class="ic"><use href="#i-phone"/></svg>Call us now: (916) 507-1005</a>
+     <h3>Your claim is in<span id="c-fname"></span>.</h3>
+     <p>Keep your phone close. A licensed public adjuster calls you, usually within one business day.</p>
+     <a class="save" href="tel:+18889712524" data-call="contact-sent"><svg class="ic"><use href="#i-phone"/></svg>Call us now, toll free: (888) 971-2524</a>
     </div>
    </div>
   </div>
@@ -646,7 +684,7 @@ body.ty .logo-link{display:inline-flex}
   <div class="done-ic"><svg class="ic" style="width:28px;height:28px"><use href="#i-check"/></svg></div>
   <h2 id="q5" tabindex="-1">Got it<span id="fname"></span>. Here’s what happens next.</h2>
   <ol class="next">
-   <li>We call you from (916) 507-1005, usually the same business day.</li>
+   <li>We call you, usually within one business day.</li>
    <li>Have the insurer’s letter or estimate nearby if you can.</li>
    <li id="li-pick">Prefer set times? Pick as many as suit you below.</li>
   </ol>
@@ -659,19 +697,19 @@ body.ty .logo-link{display:inline-flex}
    <button type="button" class="btn block" id="slot-save" disabled>Confirm my call times</button>
    <p class="booked" id="booked" role="status"></p>
   </div>
-  <a class="save" href="tel:+19165071005" data-call="thankyou"><svg class="ic"><use href="#i-phone"/></svg>Call us now: (916) 507-1005</a>
+  <a class="save" href="tel:+18889712524" data-call="thankyou"><svg class="ic"><use href="#i-phone"/></svg>Call us now, toll free: (888) 971-2524</a>
  </section>
 </div>
 
 <div class="sticky" id="sticky">
- <a class="btn ghost" href="tel:+19165071005" data-call="sticky"><svg class="ic"><use href="#i-phone"/></svg>Call</a>
- <button class="btn grow" type="button" id="sticky-start">Start my free review</button>
+ <a class="btn ghost" href="tel:+18889712524" data-call="sticky"><svg class="ic"><use href="#i-phone"/></svg>Call toll free</a>
+ <button class="btn grow" type="button" id="sticky-start">Check my claim now</button>
 </div>
 
 <footer>
  <div class="wrap">
   <div class="cols">
-   <div><h3>Blue Star Adjusters</h3><p>1610 R Street, Suite 300, Sacramento, California 95811</p><p>CA DOI License No. 6015234</p><p><a href="tel:+19165071005" data-call="footer">(916) 507-1005</a></p></div>
+   <div><h3>Blue Star Adjusters</h3><p>1610 R Street, Suite 300, Sacramento, California 95811</p><p>Serving homeowners and businesses across California.</p><p>CA DOI License No. 6015234</p><p>Toll free <a href="tel:+18889712524" data-call="footer">(888) 971-2524</a></p></div>
    <div><h3>How we work</h3><p>We represent the insured only.</p><p>No upfront cost. We’re paid a percentage of what we recover.</p><p>Office hours: Monday to Friday, 9 AM to 5 PM Pacific.</p></div>
    <div><h3>Results</h3><p>Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</p></div>
   </div>
