@@ -3,6 +3,7 @@
 const LABELS = {
   loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', storm: 'Storm or a fallen tree', denied: 'Claim denied', other: 'Something else' },
   claim_status: { not_filed: 'Haven’t filed yet', waiting: 'Filed, still waiting', low_offer: 'Got an offer, it looks low', denied: 'Denied, in full or in part' },
+  owner: { own_home: 'Owns the home', landlord: 'Landlord or business owner', rent: 'Renter' },
   loss_timing: { month: 'In the last month', m1_6: '1 to 6 months ago', m6_12: '6 to 12 months ago', over_year: 'Over a year ago' },
 };
 
@@ -14,11 +15,16 @@ function validateLead(b) {
   // source 'contact' = bottom contact form: claim status and timing are optional there.
   const contact = b.source === 'contact';
   out.source = contact ? 'contact' : 'quiz';
-  for (const k of ['loss_type', 'claim_status', 'loss_timing']) {
+  for (const k of ['loss_type', 'claim_status']) {
     if (LABELS[k][b[k]]) out[k] = b[k];
     else if (contact && k !== 'loss_type' && !b[k]) out[k] = null;
     else errors[k] = 'Please choose an answer.';
   }
+  // The quiz no longer asks when the damage happened. Keep it if an old page sends it.
+  out.loss_timing = LABELS.loss_timing[b.loss_timing] ? b.loss_timing : null;
+  // Owners only. Renters are stopped on the page and refused here, so no lead is saved and no Lead event fires.
+  if (b.owner === 'own_home' || b.owner === 'landlord') out.owner = b.owner;
+  else errors.owner = b.owner === 'rent' ? 'We take building claims for property owners only.' : 'Please choose an answer.';
   const email = clip(b.email, 200);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) errors.email = 'Please check the email address.';
   out.email = email || null;
@@ -53,6 +59,7 @@ function validateLead(b) {
 
 // Unfinished form: only a valid US phone is required. Everything else is kept if present.
 function validatePartial(b) {
+  if (b.owner === 'rent') return null; // never alert on a renter
   let digits = String(b.phone || '').replace(/\D/g, '');
   if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
   if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) return null;
@@ -62,7 +69,7 @@ function validatePartial(b) {
   out.address = clip(b.address, 200).replace(/\s+/g, ' ') || null;
   const zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
   out.zip = zip.length === 5 ? zip : null;
-  for (const k of ['loss_type', 'claim_status', 'loss_timing']) out[k] = LABELS[k][b[k]] ? b[k] : null;
+  for (const k of ['loss_type', 'claim_status', 'loss_timing', 'owner']) out[k] = LABELS[k][b[k]] ? b[k] : null;
   for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'page_variant']) out[k] = clip(b[k], 300) || null;
   out.landing_url = clip(b.landing_url, 1000) || null;
   out.referrer = clip(b.referrer, 1000) || null;

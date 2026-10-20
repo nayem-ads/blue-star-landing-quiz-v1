@@ -4,6 +4,7 @@
   var KEY = 'bs_quiz_v1';
   var LABEL = {
     loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', storm: 'Storm or a fallen tree', denied: 'Claim denied', other: 'Something else' },
+    owner: { own_home: 'Owns the home', landlord: 'Landlord or business owner', rent: 'Renter' },
     claim_status: { not_filed: 'Not filed yet', waiting: 'Still waiting', low_offer: 'Offer looks low', denied: 'Denied' },
     loss_timing: { month: 'Last month', m1_6: '1 to 6 months ago', m6_12: '6 to 12 months ago', over_year: 'Over a year ago' }
   };
@@ -39,8 +40,8 @@
     if (TY) step = 5; // the thank you page always shows the thank you screen, whatever was answered
     else {
       if (step >= 2 && !state.loss_type) step = 1;
-      if (step >= 3 && !state.claim_status) step = 2;
-      if (step >= 4 && !state.loss_timing) step = 3;
+      if (step >= 3 && (!state.owner || state.owner === 'rent')) step = 2; // renters never get past the ownership question
+      if (step >= 4 && !state.claim_status) step = 3;
       if (step === 5 && !state.lead_id) step = 4;
     }
     current = step;
@@ -49,6 +50,7 @@
     for (var i = 0; i < screens.length; i++) screens[i].classList.toggle('on', +screens[i].dataset.step === step);
     if (push) history.pushState({ step: step }, '', step > 1 ? '#step-' + step : location.pathname + location.search);
     w.scrollTo(0, 0);
+    if (step === 2) renterView(state.owner === 'rent');
     if (step > 1) {
       markSelected();
       if (step === 4) { renderAnswers(); prefill(); }
@@ -81,6 +83,7 @@
     if (o) {
       state[o.dataset.k] = o.dataset.v; save(); markSelected();
       dl('quiz_answer', { step: current, answer: o.dataset.v });
+      if (o.dataset.k === 'owner' && o.dataset.v === 'rent') { setTimeout(function () { renterView(true); }, 160); return; } // exit screen, no lead
       setTimeout(function () { show(current + 1, true); }, 160);
       return;
     }
@@ -88,6 +91,12 @@
     if (c) dl('call_click', { location: c.dataset.call });
   });
 
+  // Renter exit: shown in place of the next question. No form, so no Lead event.
+  function renterView(on) {
+    d.getElementById('own-ask').hidden = on; d.getElementById('renter-exit').hidden = !on;
+    var h = d.getElementById(on ? 'q2x' : 'q2'); if (h) setTimeout(function () { h.focus({ preventScroll: true }); }, 60);
+  }
+  d.getElementById('renter-back').addEventListener('click', function () { state.owner = ''; save(); renterView(false); show(1, true); });
   d.getElementById('back').addEventListener('click', function () { if (TY) location.href = '/'; else history.back(); });
   w.addEventListener('popstate', function (e) { if (TY) return; show((e.state && e.state.step) || stepFromHash(), false); });
   function stepFromHash() { var m = /#step-(\d)/.exec(location.hash); return m ? +m[1] : 1; }
@@ -257,13 +266,17 @@
       cform[n].addEventListener('blur', function () { if (cform[n].value) cCheck(n); });
       cform[n].addEventListener('input', function () { cErr(n, false); });
     });
+    cform.owner.addEventListener('change', function () { cErr('owner', false); });
     cform.addEventListener('submit', function (e) {
       e.preventDefault(); cerr.classList.remove('show');
       var okAll = ['name', 'phone', 'address'].map(cCheck).every(Boolean);
-      if (!okAll) { var bad = cform.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
+      var ow = cform.owner.value, owErr = d.getElementById('c-owner-err');
+      owErr.textContent = ow === 'rent' ? 'We take building claims for property owners, so we can’t review this one. If you rent, your renters insurance company is the right first call.' : 'Please choose an answer.';
+      cErr('owner', !ow || ow === 'rent'); if (!ow || ow === 'rent') okAll = false;
+      if (!okAll) { var bad = cform.querySelector('.field.bad input, .field.bad select'); if (bad) bad.focus(); return; }
       cbtn.disabled = true; var label = cbtn.innerHTML; cbtn.textContent = 'Sending';
       var payload = {
-        source: 'contact', loss_type: cform.loss_type.value, claim_status: cform.claim_status.value || null,
+        source: 'contact', owner: cform.owner.value, loss_type: cform.loss_type.value, claim_status: cform.claim_status.value || null,
         name: cform.name.value, phone: cform.phone.value, address: cform.address.value, zip: cform.zip.value, notes: cform.notes.value, company: cform.company.value,
         elapsed_ms: Date.now() - pageT0, page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
       };
@@ -288,7 +301,7 @@
 
   function renderAnswers() {
     var a = d.getElementById('answers'); a.textContent = '';
-    ['loss_type', 'claim_status', 'loss_timing'].forEach(function (k) {
+    ['loss_type', 'owner', 'claim_status'].forEach(function (k) {
       if (!state[k]) return; var s = d.createElement('span'); s.textContent = LABEL[k][state[k]]; a.appendChild(s);
     });
   }
@@ -323,7 +336,7 @@
     if (!okAll) { var bad = form.querySelector('.field.bad input'); if (bad) bad.focus(); return; }
     btn.disabled = true; btn.textContent = 'Sending';
     var payload = {
-      loss_type: state.loss_type, claim_status: state.claim_status, loss_timing: state.loss_timing,
+      loss_type: state.loss_type, owner: state.owner, claim_status: state.claim_status,
       name: form.name.value, phone: form.phone.value, address: form.address.value, zip: form.zip.value, company: form.company.value,
       elapsed_ms: state.t0 ? Date.now() - state.t0 : null, page_variant: body.dataset.variant,
       landing_url: state.landing_url, referrer: state.referrer
@@ -337,7 +350,8 @@
           goThanks(res.j.id, res.j.first_name, { loss_type: state.loss_type, claim_status: state.claim_status, form: 'quiz' });
         } else if (res.j && res.j.errors) {
           Object.keys(res.j.errors).forEach(function (k) { fieldErr(k, true); });
-          if (res.j.errors.loss_type || res.j.errors.claim_status || res.j.errors.loss_timing) show(1, true);
+          if (res.j.errors.owner) show(2, true);
+          else if (res.j.errors.loss_type || res.j.errors.claim_status) show(1, true);
         } else {
           throw new Error((res.j && res.j.error) || 'error');
         }
@@ -470,7 +484,7 @@
     var b = {
       pid: state.pid, form: isC ? 'contact' : 'quiz', name: c.name || '', phone: c.phone, address: c.address || '', zip: c.zip || '',
       loss_type: isC ? cform.loss_type.value : (state.loss_type || ''), claim_status: isC ? cform.claim_status.value : (state.claim_status || ''),
-      loss_timing: isC ? '' : (state.loss_timing || ''), page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
+      owner: isC ? cform.owner.value : (state.owner || ''), page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
     };
     for (var k in state.track) b[k] = state.track[k];
     return JSON.stringify(b);

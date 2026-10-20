@@ -40,6 +40,7 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS address TEXT;
 ALTER TABLE leads ALTER COLUMN zip DROP NOT NULL;
 ALTER TABLE leads ALTER COLUMN claim_status DROP NOT NULL;
 ALTER TABLE leads ALTER COLUMN loss_timing DROP NOT NULL;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS owner TEXT;
 CREATE TABLE IF NOT EXISTS partial_leads (
   pid TEXT PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -51,13 +52,14 @@ CREATE TABLE IF NOT EXISTS partial_leads (
   gclid TEXT, gbraid TEXT, wbraid TEXT, fbclid TEXT,
   landing_url TEXT, referrer TEXT, ip TEXT, user_agent TEXT
 );
+ALTER TABLE partial_leads ADD COLUMN IF NOT EXISTS owner TEXT;
 CREATE INDEX IF NOT EXISTS partial_leads_open_idx ON partial_leads (status, updated_at);
 CREATE INDEX IF NOT EXISTS partial_leads_phone_idx ON partial_leads (phone);
 `;
 
 const COLS = ['public_id','loss_type','claim_status','loss_timing','name','phone','zip','page_variant',
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid',
-  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam','source','email','notes','address'];
+  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam','source','email','notes','address','owner'];
 
 async function init() {
   if (!process.env.DATABASE_URL) {
@@ -126,7 +128,7 @@ async function findRecent(phone) {
 
 // ---------- unfinished forms (partial leads) ----------
 // status: open -> converted (they sent the form) | alerted (team emailed) | alert_failed
-const PCOLS = ['form', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'page_variant',
+const PCOLS = ['form', 'name', 'phone', 'address', 'zip', 'loss_type', 'owner', 'claim_status', 'loss_timing', 'page_variant',
   'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid',
   'landing_url', 'referrer', 'ip', 'user_agent'];
 const PART = new Map(); // file mode only (local dev)
