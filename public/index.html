@@ -263,6 +263,10 @@ body.funnel #landing{display:none}
 .opt .ic{color:var(--royal)}
 .opt:hover{border-color:var(--royal)}
 .opt[aria-pressed=true]{border:2px solid var(--royal);background:#EAF0FC}
+.picked{display:flex;align-items:center;gap:8px;margin:2px 0 10px;font:600 14px/1.3 var(--fb);color:var(--ink)}
+.picked .ic{color:var(--green)}
+.linkbtn{margin-left:auto;padding:6px 2px;background:none;border:0;font:600 14px var(--fb);color:var(--royal);text-decoration:underline;cursor:pointer}
+#q1-own .opt{min-height:54px;padding:13px 14px 13px 16px}
 .micro{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font:500 12px var(--fb)}
 .micro span{display:inline-flex;align-items:center;gap:5px}
 .micro .ic{color:var(--royal)}
@@ -423,10 +427,9 @@ h1{text-wrap:balance}
  <section class="hero" aria-labelledby="h1">
   <div class="wrap">
    <div class="hero-copy rise">
-    <p class="pill"><span class="dot" aria-hidden="true"></span>For homeowners and business owners with an insurance claim</p>
+    <p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>
     <h1 id="h1">{{H1}}</h1>
-    <p class="sub">A licensed public adjuster works for you, not the insurance company. We check your insurer’s estimate for what it missed after fire, smoke, water or storm damage. Free review, takes about a minute.</p>
-    <p class="sub-b">Before you accept their final number, get it checked.</p>
+    <p class="sub">A licensed public adjuster checks the insurer’s estimate for what it missed. You always have final say.</p>
     <ul class="chips"><li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>No upfront cost</li><li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Takes about a minute</li><li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>We represent you, not the insurer</li></ul>
    </div>
 
@@ -434,6 +437,7 @@ h1{text-wrap:balance}
     <div class="qcard rise" id="quiz">
      <div class="qhead note"><svg class="ic ic-s" aria-hidden="true"><use href="#i-phone"/></svg><span>A licensed adjuster calls you back, usually within one business day. No documents needed to start.</span></div>
      <div class="qbody">
+      <div id="q1-pick">
       <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 1 of 4</span><span>25%</span></div><div class="bar"><i id="bar1" style="width:0"></i></div></div>
       <h2 class="q" id="q1">What happened?</h2>
       <div class="tiles" role="group" aria-labelledby="q1">
@@ -443,6 +447,17 @@ h1{text-wrap:balance}
        <button type="button" class="tile" data-loss="storm"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-storm"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Storm or a fallen tree</b></button>
        <button type="button" class="tile" data-loss="denied"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-doc"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Claim denied</b></button>
        <button type="button" class="tile" data-loss="other"><span class="t-top"><span class="t-ic"><svg class="ic"><use href="#i-more"/></svg></span><svg class="ic arr" style="width:18px"><use href="#i-arrow"/></svg></span><b>Something else</b></button>
+      </div>
+      </div>
+      <div id="q1-own" hidden>
+      <div class="prog" aria-hidden="true"><div class="prog-row"><span>Question 2 of 4</span><span>50%</span></div><div class="bar"><i style="width:50%"></i></div></div>
+      <p class="picked"><svg class="ic ic-s" aria-hidden="true"><use href="#i-check"/></svg><span id="picked-loss"></span><button type="button" class="linkbtn" id="picked-change">Change</button></p>
+      <h2 class="q" id="q1o">Do you own this property?</h2>
+      <div class="opts" role="group" aria-labelledby="q1o">
+       <button type="button" class="opt hopt" data-v="own_home">Yes, I own my home<svg class="ic"><use href="#i-arrow"/></svg></button>
+       <button type="button" class="opt hopt" data-v="landlord">I own it as a landlord or business<svg class="ic"><use href="#i-arrow"/></svg></button>
+       <button type="button" class="opt hopt" data-v="rent">No, I rent<svg class="ic"><use href="#i-arrow"/></svg></button>
+      </div>
       </div>
      </div>
     </div>

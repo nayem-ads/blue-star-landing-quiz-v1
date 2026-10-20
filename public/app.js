@@ -34,6 +34,17 @@
   save();
 
   var current = 1;
+  // ?loss= from the ad answers question 1, so the hero card opens on the ownership question.
+  var PRE = qs.get('loss');
+  function preset(on) {
+    var pick = d.getElementById('q1-pick'), own = d.getElementById('q1-own');
+    if (!pick || !own) return;
+    pick.hidden = on; own.hidden = !on;
+    if (on) d.getElementById('picked-loss').textContent = LABEL.loss_type[state.loss_type];
+  }
+  if (!TY && PRE && LABEL.loss_type[PRE] && !location.hash) { state.loss_type = PRE; save(); }
+  var pc = d.getElementById('picked-change');
+  if (pc) pc.addEventListener('click', function () { state.loss_type = ''; save(); preset(false); });
   function show(step, push) {
     step = Math.max(1, Math.min(5, step));
     // Never land on a later step without the answers it needs.
@@ -77,6 +88,14 @@
       for (var i = 0; i < all.length; i++) all[i].setAttribute('aria-pressed', all[i].dataset.loss === state.loss_type ? 'true' : 'false');
       dl('quiz_answer', { step: 1, answer: state.loss_type });
       setTimeout(function () { show(2, true); }, 160);
+      return;
+    }
+    var ho = e.target.closest('.hopt');
+    if (ho) { // ownership asked in the hero when the ad already told us what happened (?loss=)
+      start();
+      state.owner = ho.dataset.v; save();
+      dl('quiz_answer', { step: 2, answer: state.owner });
+      setTimeout(function () { show(state.owner === 'rent' ? 2 : 3, true); }, 160);
       return;
     }
     var o = e.target.closest('.opt');
@@ -520,4 +539,5 @@
   var initial = stepFromHash();
   history.replaceState({ step: initial }, '', location.href);
   if (initial > 1) show(initial, false);
+  preset(!!(PRE && state.loss_type === PRE));
 })();

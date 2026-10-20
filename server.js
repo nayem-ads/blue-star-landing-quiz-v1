@@ -33,7 +33,18 @@ const HEADLINES = {
   water: 'Your water damage claim came back low. Get a free second opinion.',
   denied: 'Your claim was denied. That isn’t always the final answer.',
   storm: 'Your storm damage claim came back low. Get a free second opinion.',
+  // Meta landing page ads: ?h= repeats the headline of the ad that was clicked. "|" starts the blue half.
+  rebuild: 'Estimate too low to rebuild?|Get it checked.',
+  calls: 'Adjuster not calling back?|Hand the calls to us.',
+  restart: 'Fourth adjuster. Same claim.|Stop starting over.',
+  code: 'Rebuilding to today’s code?|Check your estimate first.',
+  'smoke-test': 'Smoke claim?|Get it tested before you settle.',
+  pipe: 'Burst pipe?|Get your own adjuster first.',
+  two: 'Two adjusters.|One works for you.',
+  sign: 'Got a number?|Don’t sign yet.',
+  own: 'The insurer sends an adjuster.|You can have one too.',
 };
+const AD_H = { '04': 'rebuild', '07': 'calls', '08': 'restart', '29': 'code', '13': 'smoke-test', '14': 'smoke-test', '21': 'smoke-test', '30': 'pipe', '19': 'two', '20': 'sign', '17': 'own' };
 // app.js is versioned by content hash so a deploy can never pair new HTML with a cached old script.
 const APP_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'app.js'))).digest('hex').slice(0, 10);
 const TEMPLATE = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8').replace('src="/app.js"', `src="/app.js?v=${APP_V}"`);
@@ -52,10 +63,12 @@ const pixelBody = pixelOn ? `<noscript><img height="1" width="1" style="display:
 const ROBOTS = process.env.ALLOW_INDEX === 'true' ? 'index,follow' : 'noindex,follow';
 
 function page(req, robots) {
-  const key = String(req.query.loss || req.query.h || '').toLowerCase();
+  // Meta LP campaign ads already carry utm_content=<ad number>, so the headline follows the ad without editing it.
+  const adKey = req.query.utm_campaign === 'bsa_lp_zips' ? AD_H[String(req.query.utm_content || '')] : '';
+  const key = String(req.query.h || adKey || req.query.loss || '').toLowerCase();
   const variant = HEADLINES[key] ? key : 'default';
   return TEMPLATE
-    .replaceAll('{{H1}}', HEADLINES[variant].replace('too low.', '<span class="hl">too low.</span>'))
+    .replaceAll('{{H1}}', HEADLINES[variant].includes('|') ? HEADLINES[variant].replace(/^(.*)\|(.*)$/, '$1 <span class="hl">$2</span>') : HEADLINES[variant].replace('too low.', '<span class="hl">too low.</span>'))
     .replaceAll('{{VARIANT}}', variant)
     .replaceAll('{{GTM_HEAD}}', gtmHead)
     .replaceAll('{{GTM_BODY}}', gtmBody)
