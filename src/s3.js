@@ -100,4 +100,14 @@ async function signedRequest(method, query, body, extraHeaders = {}) {
   return fetch(`${b.origin}${b.prefix}/?${query}`, { method, headers: h, body, signal: AbortSignal.timeout(15000) });
 }
 
-module.exports = { configured, presignUrl, presignPost, headSize, signedRequest };
+// Allow the landing page origins to upload straight to the bucket from the browser. Idempotent.
+const DEFAULT_ORIGINS = 'https://quiz.bluestaradjusters.com,https://blue-star-landing-quiz-v1-production.up.railway.app';
+async function ensureCors(list) {
+  const origins = (list || process.env.CORS_ORIGINS || DEFAULT_ORIGINS).split(',').map(s => s.trim()).filter(Boolean);
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><CORSConfiguration><CORSRule>${origins.map(o => `<AllowedOrigin>${o}</AllowedOrigin>`).join('')}<AllowedMethod>POST</AllowedMethod><AllowedMethod>PUT</AllowedMethod><AllowedHeader>*</AllowedHeader><MaxAgeSeconds>3000</MaxAgeSeconds></CORSRule></CORSConfiguration>`;
+  const md5 = crypto.createHash('md5').update(xml).digest('base64');
+  const r = await signedRequest('PUT', 'cors=', xml, { 'content-md5': md5, 'content-type': 'application/xml' });
+  return { ok: r.ok, status: r.status, body: r.ok ? '' : (await r.text()).slice(0, 300), origins };
+}
+
+module.exports = { configured, presignUrl, presignPost, headSize, signedRequest, ensureCors };

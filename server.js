@@ -393,4 +393,10 @@ app.use((req, res) => res.redirect(302, '/'));
 
 db.init()
   .then(() => app.listen(PORT, '0.0.0.0', () => console.log(`[web] listening on ${PORT}`)))
+  .then(() => {
+    if (!s3.configured()) return console.warn('[s3] not configured, uploads disabled');
+    s3.ensureCors()
+      .then(r => r.ok ? console.log(`[s3] CORS set for ${r.origins.join(', ')}`) : console.error(`[s3] CORS failed ${r.status}: ${r.body}`))
+      .catch(e => console.error('[s3] CORS failed', e.message));
+  })
   .catch(e => { console.error('[boot]', e); process.exit(1); });
