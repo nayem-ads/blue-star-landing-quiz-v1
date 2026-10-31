@@ -17,7 +17,7 @@ function rowsFor(lead) {
   return [
     ['Name', lead.name],
     ['Phone', lead.phone, `tel:+1${telDigits}`],
-    ['Form', lead.source === 'contact' ? 'Contact form (bottom of page)' : 'Quiz'],
+    ['Form', lead.source === 'contact' ? 'Contact form (bottom of page)' : lead.source === 'form' ? 'Page B (multi-step form)' : 'Quiz'],
     ['Email', lead.email, lead.email ? `mailto:${lead.email}` : null],
     ['Property address', lead.address],
     ['ZIP', lead.zip],
@@ -100,7 +100,7 @@ async function notifyPartial(p) {
   const rows = [
     ['Status', 'Started the form but did not press send. They have not agreed to calls or texts yet, so call by hand only.'],
     ['Name', p.name], ['Phone', p.phone, `tel:+1${telDigits}`],
-    ['Form', p.form === 'contact' ? 'Contact form (bottom of page)' : 'Quiz'],
+    ['Form', p.form === 'contact' ? 'Contact form (bottom of page)' : p.form === 'form' ? 'Page B (multi-step form)' : 'Quiz'],
     ['Property address', p.address], ['ZIP', p.zip],
     ['What happened', LABELS.loss_type[p.loss_type] || p.loss_type],
     ['Ownership', LABELS.owner[p.owner] || p.owner],

@@ -57,6 +57,15 @@ CREATE TABLE IF NOT EXISTS partial_leads (
 ALTER TABLE partial_leads ADD COLUMN IF NOT EXISTS owner TEXT;
 CREATE INDEX IF NOT EXISTS partial_leads_open_idx ON partial_leads (status, updated_at);
 CREATE INDEX IF NOT EXISTS partial_leads_phone_idx ON partial_leads (phone);
+CREATE TABLE IF NOT EXISTS lead_files (
+  id BIGSERIAL PRIMARY KEY,
+  public_id UUID NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  object_key TEXT NOT NULL UNIQUE,
+  name TEXT, size BIGINT, type TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+);
+CREATE INDEX IF NOT EXISTS lead_files_lead_idx ON lead_files (public_id);
 `;
 
 const COLS = ['public_id','loss_type','claim_status','loss_timing','name','phone','zip','page_variant',
@@ -104,8 +113,18 @@ async function setSyncStatus(publicId, col, status) {
   await pool.query(`UPDATE leads SET ${col}=$2 WHERE public_id=$1`, [publicId, String(status).slice(0, 500)]);
 }
 
+function fileLead(publicId) {
+  if (!fs.existsSync(FILE)) return null;
+  let row = null;
+  for (const l of fs.readFileSync(FILE, 'utf8').split('\n')) {
+    if (!l) continue;
+    try { const r = JSON.parse(l); if (r.public_id === publicId && r.phone) row = r; else if (row && r.claim_status_for === publicId) row.claim_status = r.claim_status; } catch (e) {}
+  }
+  return row;
+}
+
 async function getLead(publicId) {
-  if (!pool) return null;
+  if (!pool) return fileLead(publicId);
   const r = await pool.query('SELECT * FROM leads WHERE public_id=$1', [publicId]);
   return r.rows[0] || null;
 }
@@ -122,6 +141,33 @@ async function setCallback(publicId, slot) {
   }
   const r = await pool.query('UPDATE leads SET callback_slot=$2 WHERE public_id=$1 RETURNING name, phone, loss_type, zip', [publicId, slot]);
   return r.rows[0] || null;
+}
+
+// Page B step 3: claim status arrives after the lead is saved.
+async function setClaimStatus(publicId, claimStatus) {
+  if (!pool) {
+    const row = fileLead(publicId); if (!row) return null;
+    fs.appendFileSync(FILE, JSON.stringify({ claim_status_for: publicId, claim_status: claimStatus, at: new Date().toISOString() }) + '\n');
+    return { ...row, claim_status: claimStatus };
+  }
+  const r = await pool.query('UPDATE leads SET claim_status=$2 WHERE public_id=$1 RETURNING *', [publicId, claimStatus]);
+  return r.rows[0] || null;
+}
+
+// ---------- Page B uploads (files live in the bucket; this table tracks them per lead) ----------
+const FILES = new Map(); // file mode only (local dev)
+async function listFiles(publicId) {
+  if (!pool) return [...FILES.values()].filter(f => f.public_id === publicId);
+  const r = await pool.query('SELECT object_key, name, size, type, status FROM lead_files WHERE public_id=$1 ORDER BY id', [publicId]);
+  return r.rows.map(x => ({ ...x, size: Number(x.size) }));
+}
+async function addFiles(publicId, files) {
+  if (!pool) { for (const f of files) FILES.set(f.object_key, { ...f, public_id: publicId, status: 'pending' }); return; }
+  for (const f of files) await pool.query('INSERT INTO lead_files (public_id, object_key, name, size, type) VALUES ($1,$2,$3,$4,$5)', [publicId, f.object_key, f.name, f.size, f.type]);
+}
+async function setFileStatus(publicId, objectKey, status, size) {
+  if (!pool) { const f = FILES.get(objectKey); if (f && f.public_id === publicId) { f.status = status; if (size) f.size = size; } return; }
+  await pool.query('UPDATE lead_files SET status=$3, size=COALESCE($4, size) WHERE public_id=$1 AND object_key=$2', [publicId, objectKey, status, size || null]);
 }
 
 async function listLeads(limit = 5000) {
@@ -180,6 +226,12 @@ async function claimDuePartials(minutes) {
   return r.rows;
 }
 
+// Close an open unfinished form without an alert (Page B renter exit).
+async function closePartial(pid, status) {
+  if (!pool) { const p = PART.get(pid); if (p && p.status === 'open') p.status = status; return; }
+  await pool.query("UPDATE partial_leads SET status=$2 WHERE pid=$1 AND status='open'", [pid, status]);
+}
+
 async function setPartialStatus(pid, status) {
   if (!pool) { const p = PART.get(pid); if (p) p.status = status; return; }
   await pool.query('UPDATE partial_leads SET status=$2 WHERE pid=$1', [pid, status]);
@@ -208,4 +260,4 @@ async function ping() {
   return 'postgres';
 }
 
-module.exports = { init, findRecent, insertLead, setEmailStatus, setSyncStatus, getLead, setCallback, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, hasLead, listPartials };
+module.exports = { init, findRecent, insertLead, setEmailStatus, setSyncStatus, getLead, setCallback, setClaimStatus, listFiles, addFiles, setFileStatus, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, closePartial, hasLead, listPartials };

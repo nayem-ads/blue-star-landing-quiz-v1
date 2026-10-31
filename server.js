@@ -8,6 +8,7 @@ const { validateLead, validatePartial } = require('./src/validate');
 const { notifyLead, notifyCallback, notifyPartial } = require('./src/notify');
 const capi = require('./src/capi');
 const hubspot = require('./src/hubspot');
+const s3 = require('./src/s3');
 
 // After a lead is saved: server Lead event to Meta, contact + deal to HubSpot. Never blocks the visitor.
 function syncLead(lead) {
@@ -89,14 +90,44 @@ function page(req, robots) {
     .replaceAll('{{ROBOTS}}', robots || ROBOTS);
 }
 
-app.get(['/', '/index.html'], (req, res) => {
+// ---------- Page B (V5 multi-step) and the 50/50 split at / ----------
+// Sticky cookie bs_lp=a|b. ?lp=a or ?lp=b forces a page and resets the cookie. LP_SPLIT_B = percent sent to B (default 50, 0 turns B off).
+const B_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'b.js'))).digest('hex').slice(0, 10);
+const TEMPLATE_B = fs.readFileSync(path.join(__dirname, 'views', 'page-b.html'), 'utf8').replace('src="/b.js"', `src="/b.js?v=${B_V}"`);
+const SPLIT_B = Math.max(0, Math.min(100, Number(process.env.LP_SPLIT_B ?? 50)));
+const lpCookie = req => (/(?:^|;\s*)bs_lp=([ab])\b/.exec(req.get('cookie') || '') || [])[1];
+function pickVariant(req, res) {
+  const forced = String(req.query.lp || '').toLowerCase();
+  let v = forced === 'a' || forced === 'b' ? forced : lpCookie(req);
+  if (v !== 'a' && v !== 'b') v = Math.random() * 100 < SPLIT_B ? 'b' : 'a';
+  if (lpCookie(req) !== v) res.append('Set-Cookie', `bs_lp=${v}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
+  return v;
+}
+function pageB(req, robots, ty) {
+  return TEMPLATE_B
+    .replaceAll('{{GTM_HEAD}}', gtmHead)
+    .replaceAll('{{GTM_BODY}}', gtmBody)
+    .replaceAll('{{PIXEL_HEAD}}', pixelHead)
+    .replaceAll('{{PIXEL_BODY}}', pixelBody)
+    .replaceAll('{{ROBOTS}}', robots || ROBOTS)
+    .replaceAll('{{TY}}', ty ? 'ty' : '');
+}
+
+app.get('/', (req, res) => {
+  res.set({ 'Cache-Control': 'no-cache', Vary: 'Cookie' });
+  if (pickVariant(req, res) === 'b') return res.type('html').send(pageB(req));
+  res.type('html').send(page(req));
+});
+app.get('/index.html', (req, res) => {
   res.set('Cache-Control', 'no-cache');
   res.type('html').send(page(req));
 });
 
 // Real thank you page after a lead is saved. Same page shell; app.js shows the thank you screen and call time picker.
+// Page B visitors (cookie bs_lp=b) get the Page B thank you screen with the weekday calendar.
 app.get(['/thank-you', '/thank-you/'], (req, res) => {
-  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
+  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', Vary: 'Cookie' });
+  if (lpCookie(req) === 'b' && req.query.lp !== 'a') return res.type('html').send(pageB(req, 'noindex,nofollow', true));
   res.type('html').send(page(req, 'noindex,nofollow').replace(/<title>[^<]*<\/title>/, '<title>Thank you. We have your request | Blue Star Adjusters</title>'));
 });
 
@@ -187,7 +218,7 @@ app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, r
   }
 });
 
-// ---------- unfinished forms: saved while typing, alert after PARTIAL_DELAY_MIN minutes idle ----------
+// Looser limit (40 per 10 minutes) for unfinished forms and Page B follow-up calls (claim status, uploads).
 const partialHits = new Map();
 function partialLimited(ip) {
   const now = Date.now(), arr = (partialHits.get(ip) || []).filter(t => now - t < 10 * 60 * 1000);
@@ -195,6 +226,81 @@ function partialLimited(ip) {
   if (partialHits.size > 5000) partialHits.clear();
   return arr.length > 40;
 }
+
+// ---------- Page B step 3: claim status for a lead saved at step 2 ----------
+const { LABELS } = require('./src/validate');
+const leadIdOk = id => /^[0-9a-f-]{36}$/i.test(id);
+app.post('/api/lead/:id/status', express.json({ limit: '2kb' }), async (req, res) => {
+  const id = String(req.params.id), cs = String((req.body || {}).claim_status || '');
+  if (!leadIdOk(id) || !LABELS.claim_status[cs]) return res.status(400).json({ ok: false });
+  if (partialLimited(clientIp(req))) return res.status(429).json({ ok: false });
+  try {
+    const row = await db.setClaimStatus(id, cs);
+    if (!row) return res.status(404).json({ ok: false });
+    res.json({ ok: true });
+    hubspot.setClaimStatus(row.phone, cs).then(s => console.log('[hubspot] claim status', id, s)).catch(e => console.error('[hubspot] claim status', e.message));
+  } catch (e) { console.error('[status]', e.message); res.status(500).json({ ok: false }); }
+});
+
+// ---------- Page B step 4: uploads go straight from the browser to the bucket ----------
+const UP_MAX_FILES = 10, UP_MAX_TOTAL = 250 * 1024 * 1024;
+const UP_EXT = /\.(jpe?g|png|heic|heif|webp|gif|mp4|mov|m4v|3gp|webm|pdf|doc|docx)$/i;
+const linkSecret = () => process.env.FILE_LINK_SECRET || process.env.ADMIN_KEY || process.env.S3_SECRET_ACCESS_KEY || '';
+const fileToken = key => Buffer.from(key).toString('base64url') + '.' + require('crypto').createHmac('sha256', linkSecret()).update(key).digest('base64url').slice(0, 32);
+app.post('/api/lead/:id/uploads', express.json({ limit: '8kb' }), async (req, res) => {
+  const id = String(req.params.id);
+  const files = Array.isArray((req.body || {}).files) ? req.body.files : [];
+  if (!leadIdOk(id) || !files.length) return res.status(400).json({ ok: false });
+  if (!s3.configured()) return res.status(503).json({ ok: false, error: 'Uploads are not available right now. Please share them on the call.' });
+  if (partialLimited(clientIp(req))) return res.status(429).json({ ok: false });
+  try {
+    if (!(await db.getLead(id))) return res.status(404).json({ ok: false });
+    const have = (await db.listFiles(id)).filter(f => f.status !== 'failed');
+    const clean = files.map(f => ({ name: String(f.name || '').trim().slice(0, 120), size: Math.floor(Number(f.size) || 0), type: String(f.type || '').slice(0, 100) }));
+    if (clean.some(f => !UP_EXT.test(f.name) || f.size < 1)) return res.status(400).json({ ok: false, error: 'Photos, videos, PDF or Word files only.' });
+    if (have.length + clean.length > UP_MAX_FILES) return res.status(400).json({ ok: false, error: `Up to ${UP_MAX_FILES} files. Share the rest on the call.` });
+    if (have.reduce((a, f) => a + f.size, 0) + clean.reduce((a, f) => a + f.size, 0) > UP_MAX_TOTAL) return res.status(400).json({ ok: false, error: 'That’s over 250 MB in total. Remove a file or share the rest on the call.' });
+    const out = [];
+    for (const f of clean) {
+      const safe = f.name.replace(/[^\w.\- ]+/g, '_').replace(/\s+/g, '-');
+      f.object_key = `leads/${id}/${require('crypto').randomBytes(4).toString('hex')}-${safe}`;
+      f.type = f.type || 'application/octet-stream';
+      out.push({ key: f.object_key, ...s3.presignPost(f.object_key, f.type, f.size) });
+    }
+    await db.addFiles(id, clean);
+    res.json({ ok: true, uploads: out });
+  } catch (e) { console.error('[uploads]', e.message); res.status(500).json({ ok: false }); }
+});
+// After the browser finishes: check each file is in the bucket, then a note with links goes on the HubSpot deal.
+app.post('/api/lead/:id/uploads/done', express.json({ limit: '8kb' }), async (req, res) => {
+  const id = String(req.params.id);
+  const keys = Array.isArray((req.body || {}).keys) ? req.body.keys.map(String).slice(0, UP_MAX_FILES) : [];
+  if (!leadIdOk(id) || !keys.length || !s3.configured()) return res.status(400).json({ ok: false });
+  if (partialLimited(clientIp(req))) return res.status(429).json({ ok: false });
+  try {
+    const mine = (await db.listFiles(id)).filter(f => keys.includes(f.object_key));
+    const base = (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
+    const ok = [];
+    for (const f of mine) {
+      const size = await s3.headSize(f.object_key).catch(() => null);
+      await db.setFileStatus(id, f.object_key, size ? 'uploaded' : 'failed', size);
+      if (size) ok.push({ name: f.name, size, url: `${base}/f/${fileToken(f.object_key)}` });
+    }
+    res.json({ ok: true, saved: ok.length });
+    if (ok.length) hubspot.addFilesNote(id, ok).then(s => console.log('[hubspot] files', id, s)).catch(e => console.error('[hubspot] files', e.message));
+  } catch (e) { console.error('[uploads done]', e.message); res.status(500).json({ ok: false }); }
+});
+// File link used in the HubSpot note: checks the signed token, then sends a 1 hour download link from the bucket.
+app.get('/f/:token', (req, res) => {
+  const [k64] = String(req.params.token).split('.');
+  let key = ''; try { key = Buffer.from(k64 || '', 'base64url').toString(); } catch (e) {}
+  const a = Buffer.from(String(req.params.token)), b = Buffer.from(key ? fileToken(key) : '');
+  if (!linkSecret() || !key.startsWith('leads/') || a.length !== b.length || !require('crypto').timingSafeEqual(a, b) || !s3.configured()) return res.status(404).send('Not found');
+  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
+  res.redirect(302, s3.presignUrl('GET', key, 3600));
+});
+
+// ---------- unfinished forms: saved while typing, alert after PARTIAL_DELAY_MIN minutes idle ----------
 app.post('/api/partial', express.text({ type: () => true, limit: '8kb' }), async (req, res) => {
   let b;
   try { b = typeof req.body === 'string' && req.body ? JSON.parse(req.body) : {}; } catch (e) { return res.status(400).json({ ok: false }); }
@@ -203,6 +309,11 @@ app.post('/api/partial', express.text({ type: () => true, limit: '8kb' }), async
   if (b.company) return res.json({ ok: true });
   const ip = clientIp(req);
   if (partialLimited(ip)) return res.status(429).json({ ok: false });
+  // Page B renter exit: close the step 1 partial so no unfinished form alert goes out.
+  if (b.form === 'form' && b.owner === 'rent') {
+    try { await db.closePartial(pid, 'renter'); return res.json({ ok: true }); }
+    catch (e) { console.error('[partial] renter', e.message); return res.status(500).json({ ok: false }); }
+  }
   const p = validatePartial(b);
   if (!p) return res.status(400).json({ ok: false });
   p.ip = ip; p.user_agent = String(req.get('user-agent') || '').slice(0, 400);

@@ -116,4 +116,30 @@ async function addCallback(publicId, slot) {
   await hs(`/crm/v3/objects/deals/${encodeURIComponent(publicId)}?idProperty=bs_lead_id`, { method: 'PATCH', body: JSON.stringify({ properties: { bs_callback_slot: slot } }) });
 }
 
-module.exports = { pushLead, addCallback, leadSource, contactProps };
+// Page B step 3: claim status lands after the contact exists. Contact is matched on phone digits.
+async function setClaimStatus(phone, claimStatus) {
+  if (!(process.env.HUBSPOT_TOKEN || '').trim()) return 'skipped: no HUBSPOT_TOKEN';
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length !== 10) return 'skipped: no phone';
+  await hs(`/crm/v3/objects/contacts/${digits}?idProperty=bs_phone_digits`, { method: 'PATCH', body: JSON.stringify({ properties: { bs_claim_status: claimStatus } }) });
+  return 'updated';
+}
+
+// Page B step 4: a note on the deal listing the uploaded files with download links.
+async function addFilesNote(publicId, files) {
+  if (!(process.env.HUBSPOT_TOKEN || '').trim()) return 'skipped: no HUBSPOT_TOKEN';
+  const deal = await hs(`/crm/v3/objects/deals/${encodeURIComponent(publicId)}?idProperty=bs_lead_id`);
+  const esc = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const mb = n => (n / 1048576).toFixed(n < 1048576 ? 2 : 1) + ' MB';
+  const body = `<p><b>Files from the lead (${files.length})</b></p><ul>${files.map(f => `<li><a href="${esc(f.url)}">${esc(f.name)}</a> (${mb(f.size)})</li>`).join('')}</ul>`;
+  const j = await hs('/crm/v3/objects/notes', {
+    method: 'POST',
+    body: JSON.stringify({
+      properties: { hs_timestamp: new Date().toISOString(), hs_note_body: body },
+      associations: [{ to: { id: deal.id }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 214 }] }],
+    }),
+  });
+  return `note ${j.id}`;
+}
+
+module.exports = { pushLead, addCallback, setClaimStatus, addFilesNote, leadSource, contactProps };

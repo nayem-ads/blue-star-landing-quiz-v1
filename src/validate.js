@@ -13,12 +13,14 @@ function validateLead(b) {
   const errors = {};
   const out = {};
   // source 'contact' = bottom contact form: claim status and timing are optional there.
+  // source 'form' = Page B multi-step: the lead saves at the ownership answer, claim status comes one step later.
   const contact = b.source === 'contact';
-  out.source = contact ? 'contact' : 'quiz';
+  const pageB = b.source === 'form';
+  out.source = contact ? 'contact' : pageB ? 'form' : 'quiz';
   for (const k of ['loss_type', 'claim_status']) {
     if (LABELS[k][b[k]]) out[k] = b[k];
-    else if (contact && k !== 'loss_type' && !b[k]) out[k] = null;
-    else errors[k] = 'Please choose an answer.';
+    else if ((contact || pageB) && k !== 'loss_type' && !b[k]) out[k] = null;
+    else errors[k] = pageB && k === 'loss_type' ? 'Please choose what happened.' : 'Please choose an answer.';
   }
   // The quiz no longer asks when the damage happened. Keep it if an old page sends it.
   out.loss_timing = LABELS.loss_timing[b.loss_timing] ? b.loss_timing : null;
@@ -67,7 +69,7 @@ function validatePartial(b) {
   if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
   if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) return null;
   const out = { phone: `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` };
-  out.form = b.form === 'contact' ? 'contact' : 'quiz';
+  out.form = b.form === 'contact' ? 'contact' : b.form === 'form' ? 'form' : 'quiz';
   out.name = clip(b.name, 80).replace(/\s+/g, ' ') || null;
   out.address = clip(b.address, 200).replace(/\s+/g, ' ') || null;
   const zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
