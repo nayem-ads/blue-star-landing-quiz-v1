@@ -6,6 +6,18 @@ const compression = require('compression');
 const db = require('./src/db');
 const { validateLead, validatePartial } = require('./src/validate');
 const { notifyLead, notifyCallback, notifyPartial } = require('./src/notify');
+const capi = require('./src/capi');
+const hubspot = require('./src/hubspot');
+
+// After a lead is saved: server Lead event to Meta, contact + deal to HubSpot. Never blocks the visitor.
+function syncLead(lead) {
+  capi.sendLead(lead)
+    .then(s => { console.log('[capi]', lead.public_id, s); return db.setSyncStatus(lead.public_id, 'capi_status', s); })
+    .catch(e => console.error('[capi]', e.message));
+  hubspot.pushLead(lead)
+    .then(s => { console.log('[hubspot]', lead.public_id, s); return db.setSyncStatus(lead.public_id, 'hubspot_status', s); })
+    .catch(e => console.error('[hubspot]', e.message));
+}
 
 const PORT = process.env.PORT || 3000;
 const PUB = path.join(__dirname, 'public');
@@ -151,6 +163,7 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
     }
   }
   reply(200, { ok: true, id: saved.public_id, first_name: lead.name.split(' ')[0] });
+  if (!spam) syncLead(saved);
 });
 
 app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, res) => {
@@ -166,6 +179,7 @@ app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, r
     const info = await db.setCallback(id, slot);
     if (!info) return res.status(404).json({ ok: false });
     notifyCallback(info, slot, id).catch(e => console.error('[callback] email failed', e.message));
+    hubspot.addCallback(id, slot).catch(e => console.error('[callback] hubspot', e.message));
     res.json({ ok: true });
   } catch (e) {
     console.error('[callback]', e.message);
@@ -230,10 +244,23 @@ app.get('/admin/leads.csv', async (req, res) => {
   const key = process.env.ADMIN_KEY;
   if (!key || req.query.key !== key) return res.status(404).send('Not found');
   const rows = await db.listLeads();
-  const cols = ['created_at', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'is_spam', 'public_id'];
+  const cols = ['created_at', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'capi_status', 'hubspot_status', 'is_spam', 'public_id'];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="bluestar-leads.csv"', 'Cache-Control': 'no-store' });
   res.send([cols.join(','), ...rows.map(r => cols.map(c => q(r[c] instanceof Date ? r[c].toISOString() : r[c])).join(','))].join('\n'));
+});
+
+// Re-send one saved lead to Meta and HubSpot: /admin/resync?key=YOUR_ADMIN_KEY&id=LEAD_PUBLIC_ID
+// Meta drops a repeat with the same event_id inside 48 hours, so this cannot double count.
+app.get('/admin/resync', async (req, res) => {
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) return res.status(404).send('Not found');
+  const lead = await db.getLead(String(req.query.id || '')).catch(() => null);
+  if (!lead) return res.status(404).json({ ok: false, error: 'lead not found' });
+  const [c, h] = await Promise.all([capi.sendLead(lead), hubspot.pushLead(lead)]);
+  await db.setSyncStatus(lead.public_id, 'capi_status', c).catch(() => {});
+  await db.setSyncStatus(lead.public_id, 'hubspot_status', h).catch(() => {});
+  res.json({ ok: true, capi: c, hubspot: h });
 });
 
 // Send yourself a test alert after deploy: /admin/test-email?key=YOUR_ADMIN_KEY

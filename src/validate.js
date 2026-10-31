@@ -52,6 +52,9 @@ function validateLead(b) {
   for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'page_variant']) out[k] = clip(b[k], 300) || null;
   out.landing_url = clip(b.landing_url, 1000) || null;
   out.referrer = clip(b.referrer, 1000) || null;
+  // Meta browser cookies, passed to the Conversions API only (not stored).
+  out.fbp = clip(b.fbp, 200) || null;
+  out.fbc = clip(b.fbc, 500) || null;
   const s = Number(b.elapsed_ms);
   out.seconds_to_submit = Number.isFinite(s) ? Math.round(s / 1000) : null;
   return { ok: Object.keys(errors).length === 0, errors, lead: out };

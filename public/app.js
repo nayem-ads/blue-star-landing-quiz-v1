@@ -300,6 +300,7 @@
         elapsed_ms: Date.now() - pageT0, page_variant: body.dataset.variant, landing_url: state.landing_url, referrer: state.referrer
       };
       for (var k in state.track) payload[k] = state.track[k];
+      payload.fbp = ck('_fbp'); payload.fbc = ck('_fbc');
       fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         .then(function (r) { return r.json(); })
         .then(function (j) {
@@ -361,6 +362,7 @@
       landing_url: state.landing_url, referrer: state.referrer
     };
     for (var k in state.track) payload[k] = state.track[k];
+    payload.fbp = ck('_fbp'); payload.fbc = ck('_fbc');
     fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, j: j }; }); })
       .then(function (res) {
@@ -473,6 +475,7 @@
   // A valid phone number left without pressing send is saved so the team can follow up (see /privacy).
   if (!state.pid) { state.pid = (w.crypto && w.crypto.randomUUID) ? w.crypto.randomUUID() : 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12); save(); }
   var lastPartial = '', ptimer = null;
+  function ck(n) { try { var m = d.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; } catch (e) { return ''; } }
   function digitsOf(v) { var x = String(v || '').replace(/\D/g, ''); if (x.length === 11 && x[0] === '1') x = x.slice(1); return x; }
   function remember(which, f) {
     var c = state.contact || {};

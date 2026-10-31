@@ -41,6 +41,8 @@ ALTER TABLE leads ALTER COLUMN zip DROP NOT NULL;
 ALTER TABLE leads ALTER COLUMN claim_status DROP NOT NULL;
 ALTER TABLE leads ALTER COLUMN loss_timing DROP NOT NULL;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS owner TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS capi_status TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS hubspot_status TEXT;
 CREATE TABLE IF NOT EXISTS partial_leads (
   pid TEXT PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -94,6 +96,18 @@ async function insertLead(lead) {
   const ph = COLS.map((_, i) => '$' + (i + 1)).join(',');
   const r = await pool.query(`INSERT INTO leads (${COLS.join(',')}) VALUES (${ph}) RETURNING id, public_id, created_at`, vals);
   return { ...row, id: r.rows[0].id, created_at: r.rows[0].created_at };
+}
+
+// capi_status / hubspot_status: what happened when the lead was sent to Meta and HubSpot.
+async function setSyncStatus(publicId, col, status) {
+  if (!pool || !['capi_status', 'hubspot_status'].includes(col)) return;
+  await pool.query(`UPDATE leads SET ${col}=$2 WHERE public_id=$1`, [publicId, String(status).slice(0, 500)]);
+}
+
+async function getLead(publicId) {
+  if (!pool) return null;
+  const r = await pool.query('SELECT * FROM leads WHERE public_id=$1', [publicId]);
+  return r.rows[0] || null;
 }
 
 async function setEmailStatus(publicId, status, error) {
@@ -194,4 +208,4 @@ async function ping() {
   return 'postgres';
 }
 
-module.exports = { init, findRecent, insertLead, setEmailStatus, setCallback, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, hasLead, listPartials };
+module.exports = { init, findRecent, insertLead, setEmailStatus, setSyncStatus, getLead, setCallback, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, hasLead, listPartials };
