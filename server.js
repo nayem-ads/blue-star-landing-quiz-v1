@@ -94,8 +94,8 @@ function page(req, robots) {
 // Sticky cookie bs_lp=a|b. ?lp=a or ?lp=b forces a page and resets the cookie. LP_SPLIT_B = percent sent to B (default 50, 0 turns B off).
 const B_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'b.js'))).digest('hex').slice(0, 10);
 const TEMPLATE_B = fs.readFileSync(path.join(__dirname, 'views', 'page-b.html'), 'utf8').replace('src="/b.js"', `src="/b.js?v=${B_V}"`);
-const rawSplit = String(process.env.LP_SPLIT_B ?? '').replace('%', '').trim();
-const SPLIT_B = Math.max(0, Math.min(100, rawSplit === '' || !Number.isFinite(Number(rawSplit)) ? 50 : Number(rawSplit)));
+const rawSplit = String(process.env.LP_SPLIT_B ?? '').replace('%', '').trim().toLowerCase();
+const SPLIT_B = rawSplit === 'off' ? 0 : Math.max(0, Math.min(100, Number(rawSplit) > 0 ? Number(rawSplit) : 50));
 const lpCookie = req => (/(?:^|;\s*)bs_lp=([ab])\b/.exec(req.get('cookie') || '') || [])[1];
 function pickVariant(req, res) {
   const forced = String(req.query.lp || '').toLowerCase();
