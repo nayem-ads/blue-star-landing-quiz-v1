@@ -40,14 +40,19 @@ function validateLead(b) {
   if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) errors.phone = 'Please enter a 10 digit US mobile number.';
   out.phone = digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : digits;
 
-  // Property address is required on both forms (replaces the ZIP field). It needs a street number.
+  // Property address is required on both forms, but never block a lead if they omit the street number or type city/ZIP only.
   const address = clip(b.address, 200).replace(/\s+/g, ' ');
-  if (address.length < 6 || !/[a-zA-Z]/.test(address) || !/\d/.test(address)) errors.address = 'Please enter the property address with the street number.';
+  if (address.length < 2 || !/[a-zA-Z0-9]/.test(address)) errors.address = 'Please enter the property address.';
   out.address = address || null;
   let zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
   if (zip.length !== 5) {
-    const m = (out.address || '').match(/\b(9\d{4})\b/); // pull a CA ZIP out of the address if one was typed
-    zip = m ? m[1] : '';
+    if (/^\d{5}(?:-\d{4})?$/.test(out.address || '')) {
+      zip = out.address.slice(0, 5);
+    } else {
+      const tail = (out.address || '').replace(/^\s*\d+[a-zA-Z]?\b/, '');
+      const m = tail.match(/\b(\d{5})\b/g);
+      zip = m ? m[m.length - 1] : '';
+    }
   }
   out.zip = zip || null;
 

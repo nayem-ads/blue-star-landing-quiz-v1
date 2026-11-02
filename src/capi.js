@@ -24,8 +24,16 @@ function userData(lead) {
   const zip = String(lead.zip || '').replace(/\D/g, '').slice(0, 5);
   if (zip.length === 5) {
     u.zp = [sha(zip)];
-    // 90000 to 96199 are California ZIPs. Only then is the state known for sure.
-    if (+zip >= 90000 && +zip <= 96199) u.st = [sha('ca')];
+    const z = +zip;
+    const st = (z >= 90000 && z <= 96199) ? 'ca'
+      : (z >= 85000 && z <= 86599) ? 'az'
+      : (z >= 88900 && z <= 89899) ? 'nv'
+      : (z >= 97000 && z <= 97999) ? 'or'
+      : (z >= 98000 && z <= 99499) ? 'wa'
+      : (z >= 80000 && z <= 81699) ? 'co'
+      : (z >= 83200 && z <= 83899) ? 'id'
+      : (z >= 59000 && z <= 59999) ? 'mt' : '';
+    if (st) u.st = [sha(st)];
   }
   // "1610 R St, Sacramento, CA 95811": the city is the part after the street.
   const segs = String(lead.address || '').split(',').map(s => s.trim()).filter(Boolean);
@@ -36,6 +44,10 @@ function userData(lead) {
   if (/^fb\.\d\.\d+\.\d+$/.test(lead.fbp || '')) u.fbp = lead.fbp;
   if (/^fb\.\d\.\d+\.\S+$/.test(lead.fbc || '')) u.fbc = lead.fbc;
   else if (lead.fbclid) u.fbc = `fb.1.${Date.now()}.${lead.fbclid}`;
+  else if (lead.landing_url) {
+    const m = /[?&]fbclid=([^&#]+)/.exec(lead.landing_url);
+    if (m) try { u.fbc = `fb.1.${Date.now()}.${decodeURIComponent(m[1])}`; } catch (e) {}
+  }
   return u;
 }
 
@@ -48,7 +60,12 @@ function leadEvent(lead) {
     action_source: 'website',
     event_source_url: url,
     user_data: userData(lead),
-    custom_data: { content_name: lead.loss_type || undefined, content_category: lead.claim_status || undefined, form: lead.source || 'quiz' },
+    custom_data: {
+      content_name: lead.loss_type || undefined,
+      content_category: lead.claim_status || undefined,
+      form: lead.source || 'quiz',
+      page_variant: lead.page_variant || undefined,
+    },
   };
 }
 

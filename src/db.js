@@ -136,8 +136,9 @@ async function setEmailStatus(publicId, status, error) {
 
 async function setCallback(publicId, slot) {
   if (!pool) {
+    const row = fileLead(publicId); if (!row) return null;
     fs.appendFileSync(FILE, JSON.stringify({ callback_for: publicId, slot, at: new Date().toISOString() }) + '\n');
-    return { name: '', phone: '' };
+    return { name: row.name, phone: row.phone, loss_type: row.loss_type, zip: row.zip };
   }
   const r = await pool.query('UPDATE leads SET callback_slot=$2 WHERE public_id=$1 RETURNING name, phone, loss_type, zip', [publicId, slot]);
   return r.rows[0] || null;
@@ -173,7 +174,15 @@ async function setFileStatus(publicId, objectKey, status, size) {
 async function listLeads(limit = 5000) {
   if (!pool) {
     if (!fs.existsSync(FILE)) return [];
-    return fs.readFileSync(FILE, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)).filter(r => r.phone);
+    const byId = new Map();
+    for (const l of fs.readFileSync(FILE, 'utf8').trim().split('\n')) {
+      if (!l) continue;
+      const r = JSON.parse(l);
+      if (r.phone && r.public_id) byId.set(r.public_id, r);
+      else if (r.callback_for && byId.has(r.callback_for)) byId.get(r.callback_for).callback_slot = r.slot;
+      else if (r.claim_status_for && byId.has(r.claim_status_for)) byId.get(r.claim_status_for).claim_status = r.claim_status;
+    }
+    return [...byId.values()].reverse().slice(0, limit);
   }
   const r = await pool.query('SELECT * FROM leads ORDER BY created_at DESC LIMIT $1', [limit]);
   return r.rows;

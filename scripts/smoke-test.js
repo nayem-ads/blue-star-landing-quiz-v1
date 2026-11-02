@@ -40,7 +40,7 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   r = await post('/api/lead', { source: 'contact', loss_type: 'fire', name: 'No Address', phone: '(916) 555-0168', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.7' });
   j = await r.json(); ok(r.status === 400 && j.errors.address, 'contact form without address rejected');
   r = await post('/api/lead', { ...good, name: 'No Number', phone: '(916) 555-0172', address: 'Main Street Sacramento' }, { 'X-Real-IP': '10.0.0.11' });
-  j = await r.json(); ok(r.status === 400 && j.errors.address, 'quiz address without street number rejected');
+  j = await r.json(); ok(r.ok && j.ok, 'quiz address without street number accepted so no lead gets blocked');
   r = await post('/api/lead', { source: 'contact', owner: 'own_home', loss_type: 'fire', name: 'No Email', phone: '(916) 555-0173', address: '500 Capitol Mall, Sacramento, CA 95814', elapsed_ms: 30000 }, { 'X-Real-IP': '10.0.0.7' });
   j = await r.json(); ok(r.ok && j.ok, 'contact form lead saved with address, no ZIP, no email');
   r = await post(`/api/lead/${j.id}/callback`, { slots: ['Mon Oct 19, 9:30 AM PT', 'Mon Oct 19, 1:30 PM PT', 'Tue Oct 20, 11:00 AM PT'] }, { 'X-Real-IP': '10.0.0.7' });
@@ -81,6 +81,11 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   r = await post('/api/lead', { ...good, loss_type: 'storm', name: 'Storm Lead', phone: '(916) 555-0193' }, { 'X-Real-IP': '10.0.2.1' });
   ok(r.ok, 'storm loss type accepted');
   t = await (await fetch(BASE + '/?lp=a&loss=storm')).text(); ok(t.includes('storm damage claim'), 'storm headline variant');
+  r = await post('/api/lead', { source: 'form', loss_type: 'storm', owner: 'own_home', name: 'AZ Hail Lead', phone: '(602) 555-0194', address: '1234 E Main St, Mesa, AZ 85203', zip: '', page_variant: 'b', utm_source: 'facebook', utm_campaign: 'bsa_az_hail', landing_url: 'https://quiz.bluestaradjusters.com/?utm_campaign=bsa_az_hail&fbclid=AZFBCLID999' }, { 'X-Real-IP': '10.0.2.2' });
+  j = await r.json(); ok(r.ok && j.ok, 'any US address saved and 5-digit ZIP extracted');
+  const { leadEvent } = require('../src/capi');
+  const azEv = leadEvent({ public_id: 'az-1', phone: '(602) 555-0194', name: 'AZ Hail', zip: '85203', address: '1234 E Main St, Mesa, AZ 85203', loss_type: 'storm', source: 'form', page_variant: 'b', landing_url: 'https://quiz.bluestaradjusters.com/?fbclid=AZFBCLID999' });
+  ok(azEv.user_data.st && azEv.user_data.st[0] === require('crypto').createHash('sha256').update('az').digest('hex') && /^fb\.1\.\d+\.AZFBCLID999$/.test(azEv.user_data.fbc) && azEv.custom_data.page_variant === 'b', 'CAPI hashes state, synthesizes fbc from landing_url fbclid, and sends page_variant');
   t = await (await fetch(BASE + '/?lp=a')).text();
   const vis = t.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<svg[\s\S]*?<\/svg>/g, '');
   ok(!/916|507-1005|Start my free review|builder|developer|Email \(optional\)|—|–/.test(vis) && (t.match(/tel:\+18889712524/g) || []).length >= 8 && !t.includes('tel:+1916'), 'copy v2: toll free only, no old CTA, no dashes');

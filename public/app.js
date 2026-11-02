@@ -12,16 +12,16 @@
 
   function load() { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
-  function dl(ev, extra) { w.dataLayer = w.dataLayer || []; var o = { event: ev, page_variant: body.dataset.variant }; for (var k in extra) o[k] = extra[k]; w.dataLayer.push(o);
+  function dl(ev, extra) { w.dataLayer = w.dataLayer || []; var pv = body.dataset.variant || 'a'; var o = { event: ev, page_variant: pv }; for (var k in extra) o[k] = extra[k]; w.dataLayer.push(o);
     // Meta Pixel mirrors of the same actions. Lead fires only after the server saves the lead (eventID = lead id, for dedupe).
     if (typeof w.fbq !== 'function') return;
     extra = extra || {};
-    if (ev === 'generate_lead') w.fbq('track', 'Lead', { content_name: extra.loss_type, content_category: extra.claim_status, form: extra.form || 'quiz' }, { eventID: extra.lead_id });
-    else if (ev === 'call_click') w.fbq('track', 'Contact', { content_name: extra.location });
-    else if (ev === 'callback_booked') w.fbq('track', 'Schedule', { content_name: extra.slot });
-    else if (ev === 'quiz_start') w.fbq('trackCustom', 'QuizStart');
-    else if (ev === 'quiz_answer') w.fbq('trackCustom', 'QuizAnswer', { step: extra.step, answer: extra.answer });
-    else if (ev === 'cta_click') w.fbq('trackCustom', 'CTAClick', { location: extra.location });
+    if (ev === 'generate_lead') w.fbq('track', 'Lead', { content_name: extra.loss_type, content_category: extra.claim_status, form: extra.form || 'quiz', page_variant: pv }, { eventID: extra.lead_id });
+    else if (ev === 'call_click') w.fbq('track', 'Contact', { content_name: extra.location, page_variant: pv });
+    else if (ev === 'callback_booked') w.fbq('track', 'Schedule', { content_name: extra.slot, page_variant: pv });
+    else if (ev === 'quiz_start') w.fbq('trackCustom', 'QuizStart', { page_variant: pv });
+    else if (ev === 'quiz_answer') w.fbq('trackCustom', 'QuizAnswer', { step: extra.step, answer: extra.answer, page_variant: pv });
+    else if (ev === 'cta_click') w.fbq('trackCustom', 'CTAClick', { location: extra.location, page_variant: pv });
   }
 
   var state = load();
@@ -172,34 +172,40 @@
     }, 3000);
   });
 
-  // After a lead is saved: go to the real thank you page. generate_lead fires there once, so URL based conversions work too.
+  // After a lead is saved: fire Lead immediately on the active page (so slow redirects never drop browser pixel events) AND navigate to /thank-you.
   function goThanks(id, first, ev) {
     if (state.lead_id !== id) { state.slots = []; state.slots_saved = ''; }
     state.lead_id = id; state.first_name = first || '';
     ev.lead_id = id; ev.page_variant = body.dataset.variant;
+    state.fired = state.fired || {};
+    if (!state.fired[id]) { state.fired[id] = 1; dl('generate_lead', ev); }
     state.pending_lead = ev; save();
     location.assign('/thank-you');
   }
-  function addrOk(v) { v = (v || '').trim(); return v.length >= 6 && /[a-z]/i.test(v) && /\d/.test(v); }
+  function addrOk(v) { v = (v || '').trim(); return v.length >= 2 && /[a-z0-9]/i.test(v); }
 
   // Address suggestions while typing (Photon, OpenStreetMap data, free, no key). Free typing always still works.
   var US = { Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA', Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', 'District of Columbia': 'DC', Florida: 'FL', Georgia: 'GA', Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS', Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA', Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT', Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND', Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX', Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV', Wisconsin: 'WI', Wyoming: 'WY' };
-  var SKIP = {}; 'n s e w north south east west old'.split(' ').forEach(function (x) { SKIP[x] = 1; });
+  var SKIP = {}; 'n s e w ne nw se sw north south east west old'.split(' ').forEach(function (x) { SKIP[x] = 1; });
+  var TZ_LL = { 'America/Phoenix': '&lat=33.45&lon=-112.07', 'America/Los_Angeles': '&lat=36.78&lon=-119.42', 'America/Denver': '&lat=39.74&lon=-104.99', 'America/Boise': '&lat=43.62&lon=-116.20', 'America/Chicago': '&lat=32.78&lon=-96.80', 'America/New_York': '&lat=38.90&lon=-77.04', 'America/Detroit': '&lat=42.33&lon=-83.05', 'America/Indiana/Indianapolis': '&lat=39.77&lon=-86.16' };
+  var BIAS = ''; try { BIAS = TZ_LL[Intl.DateTimeFormat().resolvedOptions().timeZone] || ''; } catch (e) {}
   function acFormat(p, q) {
-    var street = p.street || (p.type === 'street' ? p.name : '');
+    var street = (p.street || (p.type === 'street' ? p.name : '') || '').replace(/[\s,]*(ste|suite|apt|unit|bldg|#)\b.*$/i, '').trim();
     if (!street) return null;
-    if (p.type === 'house' && !p.housenumber) return null; // a building with no number is not an address
-    // Only keep results that match what they typed: the street's first name word and the house number.
-    var words = q.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
-    var first = street.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(function (x) { return x && !SKIP[x]; })[0];
-    if (!first || !words.some(function (x) { return !/^\d+$/.test(x) && first.indexOf(x) === 0; })) return null;
     var qm = /^\s*(\d+[a-z]?)\b/i.exec(q), qnum = qm ? qm[1] : '';
-    if (qnum && p.housenumber && String(p.housenumber).toLowerCase().indexOf(qnum.toLowerCase()) !== 0) return null;
-    var num = p.housenumber || qnum; // street known but this house is not in the map yet: keep the number they typed
+    var rest = qm ? q.slice(qm[0].length) : q;
+    var words = rest.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(function (x) { return x && !SKIP[x]; });
+    var first = street.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(function (x) { return x && !SKIP[x]; })[0];
+    if (words.length && (!first || !words.some(function (x) { return first.indexOf(x) === 0 || x.indexOf(first) === 0; }))) return null;
+    var pnum = p.housenumber ? String(p.housenumber).split(/[;,]/)[0].trim() : '';
+    var num = qnum ? (pnum && pnum.toLowerCase().indexOf(qnum.toLowerCase()) === 0 ? pnum : qnum) : pnum;
     var line1 = (num ? num + ' ' : '') + street;
     var st = US[p.state] || p.state || '';
-    var line2 = [p.city || p.town || p.village || p.district || p.county, [st, p.postcode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-    return { line1: line1, line2: line2, full: line1 + (line2 ? ', ' + line2 : ''), zip: /^\d{5}/.test(p.postcode || '') ? p.postcode.slice(0, 5) : '' };
+    var city = p.city || p.town || p.village || p.district || p.county || '';
+    var zip = /^\d{5}/.test(p.postcode || '') ? p.postcode.slice(0, 5) : '';
+    var line2 = [city, [st, zip].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+    if (!line2) return null;
+    return { line1: line1, line2: line2, full: line1 + ', ' + line2, zip: zip };
   }
   function acInit(input, onPick) {
     if (!input) return;
@@ -231,18 +237,18 @@
       if (ctl) try { ctl.abort(); } catch (e) {}
       ctl = w.AbortController ? new AbortController() : null;
       var my = ++seq;
-      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + '&limit=10&lang=en&lat=38.58&lon=-121.49', ctl ? { signal: ctl.signal } : {})
+      fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(q) + BIAS + '&bbox=-179.9,18.9,-66.9,71.4&limit=15&lang=en', ctl ? { signal: ctl.signal } : {})
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
           if (my !== seq || !j || !j.features) return;
           var seen = {}; items = [];
           j.features.forEach(function (f) {
             var p = f.properties || {};
-            if (p.countrycode !== 'US' || (p.type !== 'house' && p.type !== 'street')) return;
+            if (p.countrycode !== 'US') return;
             var it = acFormat(p, q); if (!it || seen[it.full]) return;
-            seen[it.full] = 1; it.ca = p.state === 'California' ? 0 : 1; items.push(it);
+            seen[it.full] = 1; items.push(it);
           });
-          items = items.map(function (it, i) { it.i = i; return it; }).sort(function (x, y) { return x.ca - y.ca || x.i - y.i; }).slice(0, 5); active = -1; // California first
+          items = items.slice(0, 5); active = -1;
           if (d.activeElement === input) render();
         })
         .catch(function () {});
@@ -530,10 +536,15 @@
   w.addEventListener('pagehide', function () { sendPartial(true); });
   if (!TY) prefill();
 
-  // Real thank you page at /thank-you. The lead event fires once here, after the redirect.
+  // Real thank you page at /thank-you. Fires generate_lead if it did not already fire before redirect.
   if (TY) {
     body.classList.add('ty');
-    if (state.pending_lead) { var pl0 = state.pending_lead; delete state.pending_lead; save(); dl('generate_lead', pl0); }
+    if (state.pending_lead) {
+      var pl0 = state.pending_lead; delete state.pending_lead;
+      state.fired = state.fired || {};
+      if (!state.fired[pl0.lead_id]) { state.fired[pl0.lead_id] = 1; dl('generate_lead', pl0); }
+      save();
+    }
     show(5, false);
     return;
   }
