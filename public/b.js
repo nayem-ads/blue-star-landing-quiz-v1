@@ -34,7 +34,7 @@
   if (!state.pid) state.pid = (w.crypto && w.crypto.randomUUID) ? w.crypto.randomUUID() : 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
   save();
   try {
-    if (Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
+    if (!qs.get('state') && !/(?:^|;\s*)bs_st=(wa|nv|co|ca)\b/.test(d.cookie) && Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
       d.cookie = 'bs_st=az; Max-Age=7776000; Path=/; SameSite=Lax';
       d.querySelectorAll('.brand span,.checks li,.foot').forEach(function (el) {
         if (el.innerHTML.indexOf('6015234') > -1 || el.innerHTML.indexOf('Licensed CA') > -1) {

@@ -57,6 +57,18 @@ const HEADLINES = {
   two: 'Two adjusters.|One works for you.',
   sign: 'Got a number?|Don’t sign yet.',
   own: 'The insurer sends an adjuster.|You can have one too.',
+  'smoke-filter': 'Soot on the filter or window track?|Get hidden smoke tested free.',
+  'smoke-heat': 'Turned the heat on and smelled wildfire smoke?|Get your ducts and walls tested.',
+  'smoke-attic': 'Insurer says a wipe-down covers smoke?|Attic and HVAC ash takes real testing.',
+  'rebuild-gap': 'Rebuild estimate lower than your builder’s bid?|Have a public adjuster check every line.',
+  'hail-roof': 'Neighbors getting full roofs while you got a patch?|Get a free hail claim review.',
+  'hail-gap': 'Hail check won’t cover the roofer’s full bid?|Have a public adjuster price what’s missing.',
+  'free-review': 'Got an insurance estimate?|Have a licensed public adjuster check what they left out.',
+  'zero-risk': 'Already got a check or lowball offer?|Keep 100% — we only earn if we recover MORE.',
+  ghosted: 'Tired of chasing your insurance adjuster?|Hand every call and negotiation to yours.',
+  'two-adj': 'The insurer’s adjuster works for them.|Hire a licensed public adjuster who works for you.',
+  checklist: 'Before you cash that insurance check,|have a licensed public adjuster review it free.',
+  'case-proof': 'Insurer offered $17K for smoke.|Lab testing proved hidden damage — check your claim free.',
 };
 const AD_H = { '04': 'rebuild', '07': 'calls', '08': 'restart', '29': 'code', '13': 'smoke-test', '14': 'smoke-test', '21': 'smoke-test', '30': 'pipe', '19': 'two', '20': 'sign', '17': 'own' };
 // app.js is versioned by content hash so a deploy can never pair new HTML with a cached old script.
@@ -76,40 +88,69 @@ const pixelHead = pixelOn
 const pixelBody = pixelOn ? `<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${PIXEL}&ev=PageView&noscript=1"></noscript>` : '';
 const ROBOTS = process.env.ALLOW_INDEX === 'true' ? 'index,follow' : 'noindex,follow';
 
-// Arizona ad traffic: swap California license copy to Blue Star's Arizona firm license (No. 3004469742) so AZ homeowners see local credentials.
-const azQuery = req => /\b(az|arizona|hail|phoenix|mesa|glendale|120248791830950534|120248791831660534)\b/i.test(`${req.query.state || ''} ${req.query.utm_campaign || ''} ${req.query.hsa_cam || ''} ${req.query.hsa_grp || ''} ${req.query.loss || ''}`);
-const azCookie = req => /(?:^|;\s*)bs_st=az\b/.test(req.get('cookie') || '');
-function isAz(req, res) {
-  const q = azQuery(req), c = azCookie(req);
-  if (q && res && !c) res.append('Set-Cookie', `bs_st=az; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
-  return q || c;
+// State-aware credentials & local message-match for WA, NV, CO, AZ, and CA ad traffic.
+const STATE_CFG = {
+  az: { name: 'Arizona', code: 'AZ', lic: '3004469742', licLabel: 'AZ Firm License', dept: 'Arizona Department of Insurance and Financial Institutions', phoneEx: '(602) 555 0142', pill: 'Phoenix & East Valley · AZ Lic. 3004469742', eyebrow: 'Hail, wind or storm damage in Arizona?', serving: 'Serving homeowners and businesses across Arizona.' },
+  wa: { name: 'Washington', code: 'WA', lic: '1382428', licLabel: 'WA OIC License', dept: 'Washington Office of the Insurance Commissioner', phoneEx: '(509) 555 0142', pill: 'Spokane & Nine Mile Falls · WA Lic. 1382428', eyebrow: 'Fire or smoke damage in Spokane County?', serving: 'Serving homeowners and businesses across Washington.' },
+  nv: { name: 'Nevada', code: 'NV', lic: '4263596', licLabel: 'NV DOI License', dept: 'Nevada Division of Insurance', phoneEx: '(775) 555 0142', pill: 'NW Reno & North Valleys · NV Lic. 4263596', eyebrow: 'Wildfire smoke or ash damage in Reno?', serving: 'Serving homeowners and businesses across Nevada.' },
+  co: { name: 'Colorado', code: 'CO', lic: '969283', licLabel: 'CO DORA License', dept: 'Colorado Division of Insurance', phoneEx: '(303) 555 0142', pill: 'Denver & Aurora Homeowners · CO Lic. 969283', eyebrow: 'Hail or storm damage in Denver or Aurora?', serving: 'Serving homeowners across Colorado.' },
+};
+const stCookie = req => (/(?:^|;\s*)bs_st=(az|wa|nv|co|ca)\b/.exec(req.get('cookie') || '') || [])[1] || '';
+function detectState(req, res) {
+  if (res && req.query.fbclid) {
+    const cleanFb = String(req.query.fbclid).replace(/[^A-Za-z0-9._-]/g, '').slice(0, 400);
+    if (cleanFb) res.append('Set-Cookie', `_fbc=fb.1.${Date.now()}.${cleanFb}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
+  }
+  const explicit = String(req.query.state || '').trim().toLowerCase();
+  const hay = `${req.query.utm_campaign || ''} ${req.query.hsa_cam || ''} ${req.query.hsa_grp || ''}`;
+  let st = '';
+  const tok = re => new RegExp(`(?:^|[^a-z0-9])(?:${re})(?:$|[^a-z0-9])`, 'i');
+  if (/^(az|wa|nv|co|ca)$/.test(explicit)) st = explicit;
+  else if (tok('wa|spokane|nine[-_ ]?mile').test(hay)) st = 'wa';
+  else if (tok('nv|reno|washoe|hawk').test(hay)) st = 'nv';
+  else if (tok('co|colorado|denver|aurora').test(hay)) st = 'co';
+  else if (tok('az|arizona|phoenix|mesa|glendale|120248791830950534|120248791831660534').test(hay)) st = 'az';
+  const prev = stCookie(req);
+  if (st && res && prev !== st) res.append('Set-Cookie', `bs_st=${st}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
+  return st || prev || 'ca';
 }
-function azSwap(html) {
+function stateSwap(html, st, req) {
+  if (st === 'ca' || !STATE_CFG[st]) {
+    if (req && /(?:^|[^a-z0-9])(oc|norte|sanclemente|sjc)(?:$|[^a-z0-9])/i.test(`${req.query.area || ''} ${req.query.utm_campaign || ''}`)) {
+      return html
+        .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', '<p class="pill"><span class="dot" aria-hidden="true"></span>San Clemente &amp; South OC · CA Lic. 6015234</p>')
+        .replaceAll('<p class="eyebrow">Home or business damaged?</p>', '<p class="eyebrow">Norte Fire smoke damage in South Orange County?</p>')
+        .replaceAll('(415) 555 0142', '(949) 555 0142');
+    }
+    return html;
+  }
+  const s = STATE_CFG[st];
   return html
-    .replaceAll('A licensed California public adjuster reviews your claim for free. Answer 4 quick questions. CA DOI License 6015234.', 'A licensed Arizona public adjuster reviews your claim for free. Answer 4 quick questions. AZ Firm License 3004469742.')
-    .replaceAll('CA Lic. 6015234', 'AZ Lic. 3004469742')
-    .replaceAll('Licensed California public adjuster · CA DOI License No. 6015234', 'Licensed Arizona public adjuster · AZ Firm License No. 3004469742')
-    .replaceAll('Licensed CA Public Adjuster No. 6015234', 'Licensed AZ Public Adjuster No. 3004469742')
-    .replaceAll('Licensed CA public adjuster', 'Licensed AZ public adjuster')
-    .replaceAll('CA DOI License 6015234.', 'AZ Firm License 3004469742.')
-    .replaceAll('CA DOI License No. 6015234', 'AZ Firm License No. 3004469742')
-    .replaceAll('Look up the license on the California Department of Insurance site. Ours is 6015234.', 'Look up the license on the Arizona Department of Insurance and Financial Institutions site. Ours is 3004469742.')
+    .replaceAll('A licensed California public adjuster reviews your claim for free. Answer 4 quick questions. CA DOI License 6015234.', `A licensed ${s.name} public adjuster reviews your claim for free. Answer 4 quick questions. ${s.licLabel} ${s.lic}.`)
+    .replaceAll('CA Lic. 6015234', `${s.code} Lic. ${s.lic}`)
+    .replaceAll('Licensed California public adjuster · CA DOI License No. 6015234', `Licensed ${s.name} public adjuster · ${s.licLabel} No. ${s.lic}`)
+    .replaceAll('Licensed CA Public Adjuster No. 6015234', `Licensed ${s.code} Public Adjuster No. ${s.lic}`)
+    .replaceAll('Licensed CA public adjuster', `Licensed ${s.code} public adjuster`)
+    .replaceAll('CA DOI License 6015234.', `${s.licLabel} ${s.lic}.`)
+    .replaceAll('CA DOI License No. 6015234', `${s.licLabel} No. ${s.lic}`)
+    .replaceAll('Look up the license on the California Department of Insurance site. Ours is 6015234.', `Look up the license on the ${s.dept} site. Ours is ${s.lic}.`)
     .replaceAll('Read the fee in the contract before you sign. California requires it in writing.', 'Read the fee in the contract before you sign. Ours is written into your contract before any work starts.')
     .replaceAll('You can cancel within 3 business days of signing and receiving the contract, or 5 calendar days in a declared catastrophic disaster area.', 'You always have final say on any settlement, and every claim payment requires your signature.')
     .replaceAll('You can cancel within 3 business days of signing and receiving the contract', 'You always have final say on any settlement')
-    .replaceAll('Check our license, 6015234, on the California Department of Insurance website. Our fee and your right to cancel are written into the contract before any work starts.', 'Check our license, 3004469742, on the Arizona Department of Insurance and Financial Institutions website. Our percentage is written into your contract before any work starts.')
-    .replaceAll('Hiring a licensed public adjuster is your right in California, and insurers work with public adjusters every day.', 'Hiring a licensed public adjuster is your right in Arizona, and insurers work with public adjusters every day.')
-    .replaceAll('Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.', 'Often, yes. A first payment or a denial letter doesn’t always end the claim. Send us the letter or the estimate, and we’ll review it free.')
-    .replaceAll('Serving homeowners and businesses across California.', 'Serving homeowners and businesses across Arizona.')
-    .replaceAll('<p class="eyebrow">Home or business damaged?</p>', '<p class="eyebrow">Hail, wind or storm damage in Arizona?</p>')
-    .replaceAll('(415) 555 0142', '(602) 555 0142');
+    .replaceAll('Check our license, 6015234, on the California Department of Insurance website. Our fee and your right to cancel are written into the contract before any work starts.', `Check our license, ${s.lic}, on the ${s.dept} website. Our percentage is written into your contract before any work starts.`)
+    .replaceAll('Hiring a licensed public adjuster is your right in California, and insurers work with public adjusters every day.', `Hiring a licensed public adjuster is your right in ${s.name}, and insurers work with public adjusters every day.`)
+    .replaceAll('Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.', 'Often, yes. Your insurer’s initial payment stays yours—send us the letter or estimate and we’ll check what was left out for free.')
+    .replaceAll('Serving homeowners and businesses across California.', s.serving)
+    .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', `<p class="pill"><span class="dot" aria-hidden="true"></span>${s.pill}</p>`)
+    .replaceAll('<p class="eyebrow">Home or business damaged?</p>', `<p class="eyebrow">${s.eyebrow}</p>`)
+    .replaceAll('(415) 555 0142', s.phoneEx);
 }
 
-function page(req, robots, az) {
+function page(req, robots, st) {
   // Meta LP campaign ads already carry utm_content=<ad number>, so the headline follows the ad without editing it.
   const adKey = req.query.utm_campaign === 'bsa_lp_zips' ? AD_H[String(req.query.utm_content || '')] : '';
-  const azHail = az && !req.query.h && (!req.query.loss || req.query.loss === 'storm' || req.query.loss === 'hail') ? 'hail' : '';
-  const key = String(req.query.h || adKey || azHail || req.query.loss || '').toLowerCase();
+  const hailDefault = (st === 'az' || st === 'co') && !req.query.h && (!req.query.loss || req.query.loss === 'storm' || req.query.loss === 'hail') ? 'hail' : '';
+  const key = String(req.query.h || adKey || hailDefault || req.query.loss || '').toLowerCase();
   const variant = HEADLINES[key] ? key : 'default';
   const html = TEMPLATE
     .replaceAll('{{H1}}', HEADLINES[variant].includes('|') ? HEADLINES[variant].replace(/^(.*)\|(.*)$/, '$1 <span class="hl">$2</span>') : HEADLINES[variant].replace('too low.', '<span class="hl">too low.</span>'))
@@ -119,7 +160,7 @@ function page(req, robots, az) {
     .replaceAll('{{PIXEL_HEAD}}', pixelHead)
     .replaceAll('{{PIXEL_BODY}}', pixelBody)
     .replaceAll('{{ROBOTS}}', robots || ROBOTS);
-  return az ? azSwap(html) : html;
+  return stateSwap(html, st || 'ca', req);
 }
 
 // ---------- Page B (V5 multi-step) and the 50/50 split at / ----------
@@ -136,7 +177,7 @@ function pickVariant(req, res) {
   if (lpCookie(req) !== v) res.append('Set-Cookie', `bs_lp=${v}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
   return v;
 }
-function pageB(req, robots, ty, az) {
+function pageB(req, robots, ty, st) {
   const html = TEMPLATE_B
     .replaceAll('{{GTM_HEAD}}', gtmHead)
     .replaceAll('{{GTM_BODY}}', gtmBody)
@@ -144,27 +185,27 @@ function pageB(req, robots, ty, az) {
     .replaceAll('{{PIXEL_BODY}}', pixelBody)
     .replaceAll('{{ROBOTS}}', robots || ROBOTS)
     .replaceAll('{{TY}}', ty ? 'ty' : '');
-  return az ? azSwap(html) : html;
+  return stateSwap(html, st || 'ca', req);
 }
 
 app.get('/', (req, res) => {
   res.set({ 'Cache-Control': 'no-cache', Vary: 'Cookie' });
-  const az = isAz(req, res);
-  if (pickVariant(req, res) === 'b') return res.type('html').send(pageB(req, undefined, false, az));
-  res.type('html').send(page(req, undefined, az));
+  const st = detectState(req, res);
+  if (pickVariant(req, res) === 'b') return res.type('html').send(pageB(req, undefined, false, st));
+  res.type('html').send(page(req, undefined, st));
 });
 app.get('/index.html', (req, res) => {
   res.set('Cache-Control', 'no-cache');
-  res.type('html').send(page(req, undefined, isAz(req, res)));
+  res.type('html').send(page(req, undefined, detectState(req, res)));
 });
 
 // Real thank you page after a lead is saved. Same page shell; app.js shows the thank you screen and call time picker.
 // Page B visitors (cookie bs_lp=b) get the Page B thank you screen with the weekday calendar.
 app.get(['/thank-you', '/thank-you/'], (req, res) => {
   res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', Vary: 'Cookie' });
-  const az = isAz(req, res);
-  if (lpCookie(req) === 'b' && req.query.lp !== 'a') return res.type('html').send(pageB(req, 'noindex,nofollow', true, az));
-  res.type('html').send(page(req, 'noindex,nofollow', az).replace(/<title>[^<]*<\/title>/, '<title>Thank you. We have your request | Blue Star Adjusters</title>'));
+  const st = detectState(req, res);
+  if (lpCookie(req) === 'b' && req.query.lp !== 'a') return res.type('html').send(pageB(req, 'noindex,nofollow', true, st));
+  res.type('html').send(page(req, 'noindex,nofollow', st).replace(/<title>[^<]*<\/title>/, '<title>Thank you. We have your request | Blue Star Adjusters</title>'));
 });
 
 app.use(express.static(PUB, {

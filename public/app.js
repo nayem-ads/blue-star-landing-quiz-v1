@@ -33,7 +33,7 @@
   if (!state.landing_url || qs.get('fbclid') || qs.get('gclid') || qs.get('utm_campaign')) { state.landing_url = location.href.split('#')[0]; state.referrer = d.referrer || ''; }
   save();
   try {
-    if (Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
+    if (!qs.get('state') && !/(?:^|;\s*)bs_st=(wa|nv|co|ca)\b/.test(d.cookie) && Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
       d.cookie = 'bs_st=az; Max-Age=7776000; Path=/; SameSite=Lax';
       d.querySelectorAll('.lic-m,.lic,.lic2,.trust span').forEach(function (el) {
         el.textContent = el.textContent.replace('CA Lic. 6015234', 'AZ Lic. 3004469742').replace('Licensed California public adjuster · CA DOI License No. 6015234', 'Licensed Arizona public adjuster · AZ Firm License No. 3004469742').replace('Licensed CA Public Adjuster No. 6015234', 'Licensed AZ Public Adjuster No. 3004469742').replace('CA DOI License No. 6015234', 'AZ Firm License No. 3004469742');
