@@ -59,16 +59,16 @@ const HEADLINES = {
   own: 'The insurer sends an adjuster.|You can have one too.',
   'smoke-filter': 'Soot on the filter or window track?|Get hidden smoke tested free.',
   'smoke-heat': 'Turned the heat on and smelled wildfire smoke?|Get your ducts and walls tested.',
-  'smoke-attic': 'Insurer says a wipe-down covers smoke?|Attic and HVAC ash takes real testing.',
+  'smoke-attic': 'Smoke settles where nobody looks.|Get your attic and ducts checked free.',
   'rebuild-gap': 'Rebuild estimate lower than your builder’s bid?|Have a public adjuster check every line.',
   'hail-roof': 'Neighbors getting full roofs while you got a patch?|Get a free hail claim review.',
-  'hail-gap': 'Hail check won’t cover the roofer’s full bid?|Have a public adjuster price what’s missing.',
+  'hail-gap': 'Hail check won’t cover the roofer’s full bid?|Have a public adjuster check what’s missing.',
   'free-review': 'Got an insurance estimate?|Have a licensed public adjuster check what they left out.',
-  'zero-risk': 'Already got a check or lowball offer?|Keep 100% — we only earn if we recover MORE.',
+  'zero-risk': 'Already got a check or lowball offer?|Get a free claim review with no upfront cost.',
   ghosted: 'Tired of chasing your insurance adjuster?|Hand every call and negotiation to yours.',
   'two-adj': 'The insurer’s adjuster works for them.|Hire a licensed public adjuster who works for you.',
   checklist: 'Before you cash that insurance check,|have a licensed public adjuster review it free.',
-  'case-proof': 'Insurer offered $17K for smoke.|Lab testing proved hidden damage — check your claim free.',
+  'case-proof': 'Insurer offered $17K for smoke.|Get your claim checked before you settle.',
 };
 const AD_H = { '04': 'rebuild', '07': 'calls', '08': 'restart', '29': 'code', '13': 'smoke-test', '14': 'smoke-test', '21': 'smoke-test', '30': 'pipe', '19': 'two', '20': 'sign', '17': 'own' };
 // app.js is versioned by content hash so a deploy can never pair new HTML with a cached old script.
@@ -139,7 +139,7 @@ function stateSwap(html, st, req) {
     .replaceAll('You can cancel within 3 business days of signing and receiving the contract', 'You always have final say on any settlement')
     .replaceAll('Check our license, 6015234, on the California Department of Insurance website. Our fee and your right to cancel are written into the contract before any work starts.', `Check our license, ${s.lic}, on the ${s.dept} website. Our percentage is written into your contract before any work starts.`)
     .replaceAll('Hiring a licensed public adjuster is your right in California, and insurers work with public adjusters every day.', `Hiring a licensed public adjuster is your right in ${s.name}, and insurers work with public adjusters every day.`)
-    .replaceAll('Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.', 'Often, yes. Your insurer’s initial payment stays yours—send us the letter or estimate and we’ll check what was left out for free.')
+    .replaceAll('Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.', 'Usually not. Send us the insurer’s letter or estimate and we will check what was left out for free before you decide.')
     .replaceAll('Serving homeowners and businesses across California.', s.serving)
     .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', `<p class="pill"><span class="dot" aria-hidden="true"></span>${s.pill}</p>`)
     .replaceAll('<p class="eyebrow">Home or business damaged?</p>', `<p class="eyebrow">${s.eyebrow}</p>`)
