@@ -46,6 +46,7 @@ const HEADLINES = {
   water: 'Your water damage claim came back low. Get a free second opinion.',
   denied: 'Your claim was denied. That isn’t always the final answer.',
   storm: 'Your storm damage claim came back low. Get a free second opinion.',
+  hail: 'Hail or storm damage claim?|Get a free second opinion.',
   // Meta landing page ads: ?h= repeats the headline of the ad that was clicked. "|" starts the blue half.
   rebuild: 'Estimate too low to rebuild?|Get it checked.',
   calls: 'Adjuster not calling back?|Hand the calls to us.',
@@ -70,17 +71,47 @@ const gtmBody = gtmHead ? `<noscript><iframe src="https://www.googletagmanager.c
 const PIXEL = (process.env.META_PIXEL_ID || '2836808853350981').trim();
 const pixelOn = /^\d{10,20}$/.test(PIXEL);
 const pixelHead = pixelOn
-  ? `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');try{var m=/[?&]fbclid=([^&#]+)/.exec(location.search);if(m&&!/;\s*_fbc=|^_fbc=/.test(document.cookie))document.cookie='_fbc=fb.1.'+Date.now()+'.'+decodeURIComponent(m[1])+'; Max-Age=7776000; Path=/; SameSite=Lax'}catch(e){}fbq.disablePushState=true;fbq('init','${PIXEL}');fbq('track','PageView');</script>`
+  ? `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');try{var m=/[?&]fbclid=([^&#]+)/.exec(location.search);if(m)document.cookie='_fbc=fb.1.'+Date.now()+'.'+decodeURIComponent(m[1])+'; Max-Age=7776000; Path=/; SameSite=Lax'}catch(e){}fbq.disablePushState=true;fbq('init','${PIXEL}');fbq('track','PageView');</script>`
   : '';
 const pixelBody = pixelOn ? `<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${PIXEL}&ev=PageView&noscript=1"></noscript>` : '';
 const ROBOTS = process.env.ALLOW_INDEX === 'true' ? 'index,follow' : 'noindex,follow';
 
-function page(req, robots) {
+// Arizona ad traffic: swap California license copy to Blue Star's Arizona firm license (No. 3004469742) so AZ homeowners see local credentials.
+const azQuery = req => /\b(az|arizona|hail|phoenix|mesa|glendale|120248791830950534|120248791831660534)\b/i.test(`${req.query.state || ''} ${req.query.utm_campaign || ''} ${req.query.hsa_cam || ''} ${req.query.hsa_grp || ''} ${req.query.loss || ''}`);
+const azCookie = req => /(?:^|;\s*)bs_st=az\b/.test(req.get('cookie') || '');
+function isAz(req, res) {
+  const q = azQuery(req), c = azCookie(req);
+  if (q && res && !c) res.append('Set-Cookie', `bs_st=az; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
+  return q || c;
+}
+function azSwap(html) {
+  return html
+    .replaceAll('A licensed California public adjuster reviews your claim for free. Answer 4 quick questions. CA DOI License 6015234.', 'A licensed Arizona public adjuster reviews your claim for free. Answer 4 quick questions. AZ Firm License 3004469742.')
+    .replaceAll('CA Lic. 6015234', 'AZ Lic. 3004469742')
+    .replaceAll('Licensed California public adjuster · CA DOI License No. 6015234', 'Licensed Arizona public adjuster · AZ Firm License No. 3004469742')
+    .replaceAll('Licensed CA Public Adjuster No. 6015234', 'Licensed AZ Public Adjuster No. 3004469742')
+    .replaceAll('Licensed CA public adjuster', 'Licensed AZ public adjuster')
+    .replaceAll('CA DOI License 6015234.', 'AZ Firm License 3004469742.')
+    .replaceAll('CA DOI License No. 6015234', 'AZ Firm License No. 3004469742')
+    .replaceAll('Look up the license on the California Department of Insurance site. Ours is 6015234.', 'Look up the license on the Arizona Department of Insurance and Financial Institutions site. Ours is 3004469742.')
+    .replaceAll('Read the fee in the contract before you sign. California requires it in writing.', 'Read the fee in the contract before you sign. Ours is written into your contract before any work starts.')
+    .replaceAll('You can cancel within 3 business days of signing and receiving the contract, or 5 calendar days in a declared catastrophic disaster area.', 'You always have final say on any settlement, and every claim payment requires your signature.')
+    .replaceAll('You can cancel within 3 business days of signing and receiving the contract', 'You always have final say on any settlement')
+    .replaceAll('Check our license, 6015234, on the California Department of Insurance website. Our fee and your right to cancel are written into the contract before any work starts.', 'Check our license, 3004469742, on the Arizona Department of Insurance and Financial Institutions website. Our percentage is written into your contract before any work starts.')
+    .replaceAll('Hiring a licensed public adjuster is your right in California, and insurers work with public adjusters every day.', 'Hiring a licensed public adjuster is your right in Arizona, and insurers work with public adjusters every day.')
+    .replaceAll('Usually not. In California our fee can never leave you with less than the insurer paid before you hired us.', 'Often, yes. A first payment or a denial letter doesn’t always end the claim. Send us the letter or the estimate, and we’ll review it free.')
+    .replaceAll('Serving homeowners and businesses across California.', 'Serving homeowners and businesses across Arizona.')
+    .replaceAll('<p class="eyebrow">Home or business damaged?</p>', '<p class="eyebrow">Hail, wind or storm damage in Arizona?</p>')
+    .replaceAll('(415) 555 0142', '(602) 555 0142');
+}
+
+function page(req, robots, az) {
   // Meta LP campaign ads already carry utm_content=<ad number>, so the headline follows the ad without editing it.
   const adKey = req.query.utm_campaign === 'bsa_lp_zips' ? AD_H[String(req.query.utm_content || '')] : '';
-  const key = String(req.query.h || adKey || req.query.loss || '').toLowerCase();
+  const azHail = az && !req.query.h && (!req.query.loss || req.query.loss === 'storm' || req.query.loss === 'hail') ? 'hail' : '';
+  const key = String(req.query.h || adKey || azHail || req.query.loss || '').toLowerCase();
   const variant = HEADLINES[key] ? key : 'default';
-  return TEMPLATE
+  const html = TEMPLATE
     .replaceAll('{{H1}}', HEADLINES[variant].includes('|') ? HEADLINES[variant].replace(/^(.*)\|(.*)$/, '$1 <span class="hl">$2</span>') : HEADLINES[variant].replace('too low.', '<span class="hl">too low.</span>'))
     .replaceAll('{{VARIANT}}', variant)
     .replaceAll('{{GTM_HEAD}}', gtmHead)
@@ -88,6 +119,7 @@ function page(req, robots) {
     .replaceAll('{{PIXEL_HEAD}}', pixelHead)
     .replaceAll('{{PIXEL_BODY}}', pixelBody)
     .replaceAll('{{ROBOTS}}', robots || ROBOTS);
+  return az ? azSwap(html) : html;
 }
 
 // ---------- Page B (V5 multi-step) and the 50/50 split at / ----------
@@ -104,32 +136,35 @@ function pickVariant(req, res) {
   if (lpCookie(req) !== v) res.append('Set-Cookie', `bs_lp=${v}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
   return v;
 }
-function pageB(req, robots, ty) {
-  return TEMPLATE_B
+function pageB(req, robots, ty, az) {
+  const html = TEMPLATE_B
     .replaceAll('{{GTM_HEAD}}', gtmHead)
     .replaceAll('{{GTM_BODY}}', gtmBody)
     .replaceAll('{{PIXEL_HEAD}}', pixelHead)
     .replaceAll('{{PIXEL_BODY}}', pixelBody)
     .replaceAll('{{ROBOTS}}', robots || ROBOTS)
     .replaceAll('{{TY}}', ty ? 'ty' : '');
+  return az ? azSwap(html) : html;
 }
 
 app.get('/', (req, res) => {
   res.set({ 'Cache-Control': 'no-cache', Vary: 'Cookie' });
-  if (pickVariant(req, res) === 'b') return res.type('html').send(pageB(req));
-  res.type('html').send(page(req));
+  const az = isAz(req, res);
+  if (pickVariant(req, res) === 'b') return res.type('html').send(pageB(req, undefined, false, az));
+  res.type('html').send(page(req, undefined, az));
 });
 app.get('/index.html', (req, res) => {
   res.set('Cache-Control', 'no-cache');
-  res.type('html').send(page(req));
+  res.type('html').send(page(req, undefined, isAz(req, res)));
 });
 
 // Real thank you page after a lead is saved. Same page shell; app.js shows the thank you screen and call time picker.
 // Page B visitors (cookie bs_lp=b) get the Page B thank you screen with the weekday calendar.
 app.get(['/thank-you', '/thank-you/'], (req, res) => {
   res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow', Vary: 'Cookie' });
-  if (lpCookie(req) === 'b' && req.query.lp !== 'a') return res.type('html').send(pageB(req, 'noindex,nofollow', true));
-  res.type('html').send(page(req, 'noindex,nofollow').replace(/<title>[^<]*<\/title>/, '<title>Thank you. We have your request | Blue Star Adjusters</title>'));
+  const az = isAz(req, res);
+  if (lpCookie(req) === 'b' && req.query.lp !== 'a') return res.type('html').send(pageB(req, 'noindex,nofollow', true, az));
+  res.type('html').send(page(req, 'noindex,nofollow', az).replace(/<title>[^<]*<\/title>/, '<title>Thank you. We have your request | Blue Star Adjusters</title>'));
 });
 
 app.use(express.static(PUB, {

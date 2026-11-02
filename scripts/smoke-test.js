@@ -86,6 +86,13 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   const { leadEvent } = require('../src/capi');
   const azEv = leadEvent({ public_id: 'az-1', phone: '(602) 555-0194', name: 'AZ Hail', zip: '85203', address: '1234 E Main St, Mesa, AZ 85203', loss_type: 'storm', source: 'form', page_variant: 'b', landing_url: 'https://quiz.bluestaradjusters.com/?fbclid=AZFBCLID999' });
   ok(azEv.user_data.st && azEv.user_data.st[0] === require('crypto').createHash('sha256').update('az').digest('hex') && /^fb\.1\.\d+\.AZFBCLID999$/.test(azEv.user_data.fbc) && azEv.custom_data.page_variant === 'b', 'CAPI hashes state, synthesizes fbc from landing_url fbclid, and sends page_variant');
+  const { contactProps } = require('../src/hubspot');
+  const azHs = contactProps({ public_id: 'az-1', phone: '(602) 555-0194', name: 'AZ Hail', zip: '85203', address: '1234 E Main St, Mesa, AZ 85203', loss_type: 'hail', owner: 'own_home', source: 'quiz', page_variant: 'hail' });
+  ok(azHs.state === 'AZ' && azHs.bs_loss_type === 'storm', 'HubSpot maps AZ ZIP to state=AZ and hail to bs_loss_type=storm');
+  t = await (await fetch(BASE + '/?lp=a&utm_campaign=bsa_az_hail&state=az')).text();
+  ok(t.includes('3004469742') && !t.includes('6015234') && t.includes('Hail or storm damage claim?') && t.includes('Hail, storm or tree'), 'AZ Page A swaps license to 3004469742 and shows hail headline + tile');
+  t = await (await fetch(BASE + '/?lp=b&hsa_cam=120248791830950534')).text();
+  ok(t.includes('3004469742') && !t.includes('6015234') && t.includes('Hail, storm or tree'), 'AZ Page B swaps license to 3004469742 via HubSpot campaign ID');
   t = await (await fetch(BASE + '/?lp=a')).text();
   const vis = t.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<svg[\s\S]*?<\/svg>/g, '');
   ok(!/916|507-1005|Start my free review|builder|developer|Email \(optional\)|—|–/.test(vis) && (t.match(/tel:\+18889712524/g) || []).length >= 8 && !t.includes('tel:+1916'), 'copy v2: toll free only, no old CTA, no dashes');

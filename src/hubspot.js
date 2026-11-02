@@ -6,7 +6,20 @@ const API = 'https://api.hubapi.com';
 const PIPELINE = (process.env.HUBSPOT_PIPELINE || 'Blue Star Leads').trim();
 const STAGE = (process.env.HUBSPOT_STAGE || 'New lead').trim();
 
-const LOSS = { fire: 'Fire', smoke: 'Smoke', water: 'Water', storm: 'Storm', denied: 'Denied claim', other: 'Other' };
+const LOSS = { fire: 'Fire', smoke: 'Smoke', water: 'Water', storm: 'Hail / Storm', hail: 'Hail', denied: 'Denied claim', other: 'Other' };
+
+function zipState(zip) {
+  if (!zip || !/^\d{5}$/.test(zip)) return '';
+  const z = +zip;
+  return (z >= 90000 && z <= 96199) ? 'CA'
+    : (z >= 85000 && z <= 86599) ? 'AZ'
+    : (z >= 88900 && z <= 89899) ? 'NV'
+    : (z >= 97000 && z <= 97999) ? 'OR'
+    : (z >= 98000 && z <= 99499) ? 'WA'
+    : (z >= 80000 && z <= 81699) ? 'CO'
+    : (z >= 83200 && z <= 83899) ? 'ID'
+    : (z >= 59000 && z <= 59999) ? 'MT' : '';
+}
 
 // Where the lead came from, from the click IDs and UTMs the page saved on first touch.
 function leadSource(l) {
@@ -50,10 +63,10 @@ function contactProps(l) {
     firstname: parts[0] || '', lastname: parts.slice(1).join(' '),
     phone: digits.length === 10 ? '+1' + digits : l.phone,
     address: segs[0] || '', city: segs.length >= 3 ? segs[1] : '', zip,
-    state: zip && +zip >= 90000 && +zip <= 96199 ? 'CA' : '',
+    state: zipState(zip),
     bs_phone_digits: digits,
     bs_lead_source: leadSource(l),
-    bs_loss_type: l.loss_type || '', bs_claim_status: l.claim_status || '', bs_owner: l.owner || '',
+    bs_loss_type: l.loss_type === 'hail' ? 'storm' : (l.loss_type || ''), bs_claim_status: l.claim_status || '', bs_owner: l.owner || '',
     bs_form: l.source || 'quiz', bs_page_variant: l.page_variant || '',
     bs_property_address: l.address || '', bs_lead_id: String(l.public_id || ''),
     bs_utm_source: l.utm_source || '', bs_utm_medium: l.utm_medium || '', bs_utm_campaign: l.utm_campaign || '',
@@ -88,7 +101,7 @@ async function createDeal(l, contactId, ps) {
       properties: {
         dealname: [l.name, LOSS[l.loss_type], where].filter(Boolean).join(' - ').slice(0, 200),
         pipeline: ps.pipeline, dealstage: ps.stage, description: lines.join('\n'),
-        bs_lead_id: String(l.public_id), bs_lead_source: leadSource(l), bs_loss_type: l.loss_type || '',
+        bs_lead_id: String(l.public_id), bs_lead_source: leadSource(l), bs_loss_type: l.loss_type === 'hail' ? 'storm' : (l.loss_type || ''),
         bs_form: l.source || 'quiz', bs_page_variant: l.page_variant || '',
       },
       associations: [{ to: { id: contactId }, types: [{ associationCategory: 'HUBSPOT_DEFINED', associationTypeId: 3 }] }],

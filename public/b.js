@@ -4,7 +4,7 @@
   var d = document, w = window, body = d.body;
   var KEY = 'bs_b_v1';
   var TRACK = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid'];
-  var LOSS = { fire: 1, smoke: 1, water: 1, storm: 1, denied: 1, other: 1 };
+  var LOSS = { fire: 1, smoke: 1, water: 1, storm: 1, hail: 1, denied: 1, other: 1 };
   var CALL = 'Please try again or call toll free (888) 971-2524.';
   function load() { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -30,9 +30,19 @@
   var qs = new URLSearchParams(location.search);
   state.track = state.track || {};
   TRACK.forEach(function (k) { if (qs.get(k)) state.track[k] = qs.get(k); });
-  if (!state.landing_url) { state.landing_url = location.href.split('#')[0]; state.referrer = d.referrer || ''; }
+  if (!state.landing_url || qs.get('fbclid') || qs.get('gclid') || qs.get('utm_campaign')) { state.landing_url = location.href.split('#')[0]; state.referrer = d.referrer || ''; }
   if (!state.pid) state.pid = (w.crypto && w.crypto.randomUUID) ? w.crypto.randomUUID() : 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
   save();
+  try {
+    if (Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
+      d.cookie = 'bs_st=az; Max-Age=7776000; Path=/; SameSite=Lax';
+      d.querySelectorAll('.brand span,.checks li,.foot').forEach(function (el) {
+        if (el.innerHTML.indexOf('6015234') > -1 || el.innerHTML.indexOf('Licensed CA') > -1) {
+          el.innerHTML = el.innerHTML.replace('CA Lic. 6015234', 'AZ Lic. 3004469742').replace('Licensed CA public adjuster', 'Licensed AZ public adjuster').replace('CA DOI License No. 6015234', 'AZ Firm License No. 3004469742');
+        }
+      });
+    }
+  } catch (e) {}
 
   d.addEventListener('click', function (e) { var c = e.target.closest('[data-call]'); if (c) dl('call_click', { location: c.dataset.call }); });
 
@@ -152,7 +162,8 @@
   var f1 = $('f1'), sel = $('f-loss'), fname = $('f-name'), fphone = $('f-phone'), faddr = $('f-address');
   function fmtPhone(x) { return x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x; }
   if (f1) {
-    if (state.loss_type) sel.value = state.loss_type;
+    if (state.loss_type) sel.value = state.loss_type === 'hail' ? 'storm' : state.loss_type;
+    else if (qs.get('loss') === 'hail' || /az|hail|120248791830950534/i.test((qs.get('utm_campaign') || '') + ' ' + (qs.get('hsa_cam') || ''))) sel.value = 'storm';
     else if (LOSS[qs.get('loss')]) sel.value = qs.get('loss'); // ?loss= from the ad pre-selects what happened
     ['name', 'phone', 'address'].forEach(function (k) { if (state[k] && !f1[k].value) f1[k].value = state[k]; });
     if (state.zip) f1.zip.value = state.zip;

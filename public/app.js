@@ -3,7 +3,7 @@
   var d = document, w = window, body = d.body;
   var KEY = 'bs_quiz_v1';
   var LABEL = {
-    loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', storm: 'Storm or a fallen tree', denied: 'Claim denied', other: 'Something else' },
+    loss_type: { fire: 'Fire', smoke: 'Smoke damage', water: 'Water or a leak', storm: 'Hail, storm or tree', hail: 'Hail or wind damage', denied: 'Claim denied', other: 'Something else' },
     owner: { own_home: 'Owns the home', landlord: 'Landlord or business owner', rent: 'Renter' },
     claim_status: { not_filed: 'Not filed yet', waiting: 'Still waiting', low_offer: 'Offer looks low', denied: 'Denied' },
     loss_timing: { month: 'Last month', m1_6: '1 to 6 months ago', m6_12: '6 to 12 months ago', over_year: 'Over a year ago' }
@@ -30,12 +30,21 @@
   var qs = new URLSearchParams(location.search);
   state.track = state.track || {};
   TRACK.forEach(function (k) { if (qs.get(k)) state.track[k] = qs.get(k); });
-  if (!state.landing_url) { state.landing_url = location.href.split('#')[0]; state.referrer = d.referrer || ''; }
+  if (!state.landing_url || qs.get('fbclid') || qs.get('gclid') || qs.get('utm_campaign')) { state.landing_url = location.href.split('#')[0]; state.referrer = d.referrer || ''; }
   save();
+  try {
+    if (Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
+      d.cookie = 'bs_st=az; Max-Age=7776000; Path=/; SameSite=Lax';
+      d.querySelectorAll('.lic-m,.lic,.lic2,.trust span').forEach(function (el) {
+        el.textContent = el.textContent.replace('CA Lic. 6015234', 'AZ Lic. 3004469742').replace('Licensed California public adjuster · CA DOI License No. 6015234', 'Licensed Arizona public adjuster · AZ Firm License No. 3004469742').replace('Licensed CA Public Adjuster No. 6015234', 'Licensed AZ Public Adjuster No. 3004469742').replace('CA DOI License No. 6015234', 'AZ Firm License No. 3004469742');
+      });
+    }
+  } catch (e) {}
 
   var current = 1;
   // ?loss= from the ad answers question 1, so the hero card opens on the ownership question.
-  var PRE = qs.get('loss');
+  var rawPre = qs.get('loss');
+  var PRE = rawPre === 'hail' ? 'storm' : rawPre;
   function preset(on) {
     var pick = d.getElementById('q1-pick'), own = d.getElementById('q1-own');
     if (!pick || !own) return;
@@ -173,14 +182,16 @@
   });
 
   // After a lead is saved: fire Lead immediately on the active page (so slow redirects never drop browser pixel events) AND navigate to /thank-you.
+  var goingThanks = false;
   function goThanks(id, first, ev) {
+    goingThanks = true;
     if (state.lead_id !== id) { state.slots = []; state.slots_saved = ''; }
     state.lead_id = id; state.first_name = first || '';
     ev.lead_id = id; ev.page_variant = body.dataset.variant;
     state.fired = state.fired || {};
     if (!state.fired[id]) { state.fired[id] = 1; dl('generate_lead', ev); }
     state.pending_lead = ev; save();
-    location.assign('/thank-you');
+    setTimeout(function () { location.assign('/thank-you'); }, 220);
   }
   function addrOk(v) { v = (v || '').trim(); return v.length >= 2 && /[a-z0-9]/i.test(v); }
 
@@ -320,7 +331,7 @@
           cerr.textContent = (err && err.message && err.message !== 'error' && err.message.indexOf('Failed') === -1) ? err.message : 'We couldn’t send that. Please try again or call toll free (888) 971-2524.';
           cerr.classList.add('show');
         })
-        .finally(function () { cbtn.disabled = false; cbtn.innerHTML = label; });
+        .finally(function () { if (!goingThanks) { cbtn.disabled = false; cbtn.innerHTML = label; } });
     });
     acInit(d.getElementById('c-address'), function () { cCheck('address'); });
   } catch (e) { if (w.console) console.error('contact form init', e); }
@@ -387,7 +398,7 @@
         ferr.textContent = (err && err.message && err.message !== 'error' && err.message.indexOf('Failed') === -1) ? err.message : 'We couldn’t send that. Please try again or call toll free (888) 971-2524.';
         ferr.classList.add('show');
       })
-      .finally(function () { btn.disabled = false; btn.textContent = 'Get my free review'; });
+      .finally(function () { if (!goingThanks) { btn.disabled = false; btn.textContent = 'Get my free review'; } });
   });
   acInit(d.getElementById('f-address'), function () { check('address'); });
 
