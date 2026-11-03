@@ -13,7 +13,7 @@ This is the paid landing page for Google Ads (Quiz First, F1). On mobile the fir
 3. In the same project, choose **+ New**, then **Database**, then **Add PostgreSQL**.
 4. Open the web service and go to **Variables**. Add:
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`. Use Railway's reference picker so it links to the database.
-   - `NOTIFY_TO` = `nayem.adsmanager@gmail.com,mike@bluestaradjusters.com` (comma separated; the first address receives, the rest are copied).
+   - `NOTIFY_TO` = `mike@bluestaradjusters.com,nayem.adsmanager@gmail.com` (comma separated; the first address receives, the rest are copied).
    - `ADMIN_KEY` = any long random text. This protects the CSV download and the test email.
    - Email: pick one of the two options below.
 5. Go to **Settings**, then **Networking**, then **Generate Domain**. You can add a custom domain later, for example `review.bluestaradjusters.com`.

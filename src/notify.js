@@ -4,13 +4,25 @@
 // 2. otherwise            -> FormSubmit (no account; first email asks you to click "Activate" once).
 const { LABELS } = require('./validate');
 
-const PRIMARY_TO = (process.env.NOTIFY_PRIMARY || 'mike@bluestaradjusters.com').trim().toLowerCase();
+const DEFAULT_PRIMARY = 'mike@bluestaradjusters.com';
+const DEFAULT_CC = 'nayem.adsmanager@gmail.com';
+const FORM_ORIGIN = (process.env.FORMSUBMIT_ORIGIN || 'https://quiz.bluestaradjusters.com').replace(/\/+$/, '');
+
 function TO() {
-  const list = (process.env.NOTIFY_TO || 'mike@bluestaradjusters.com,nayem.adsmanager@gmail.com')
-    .split(',').map(s => s.trim()).filter(Boolean);
-  const idx = list.findIndex(e => e.toLowerCase() === PRIMARY_TO);
-  if (idx > 0) list.unshift(list.splice(idx, 1)[0]);
-  return list;
+  const raw = (process.env.NOTIFY_TO || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (raw.length && raw.every(e => /\.invalid$/i.test(e))) return raw;
+
+  const primary = (process.env.NOTIFY_PRIMARY || DEFAULT_PRIMARY).trim();
+  const defaultCc = (process.env.NOTIFY_CC || DEFAULT_CC).split(',').map(s => s.trim()).filter(Boolean);
+  const seen = new Set();
+  const out = [];
+  for (const addr of [primary, ...defaultCc, ...raw]) {
+    const key = addr.toLowerCase();
+    if (!key || seen.has(key) || /\.invalid$/i.test(key)) continue;
+    seen.add(key);
+    out.push(addr);
+  }
+  return out;
 }
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -59,10 +71,9 @@ async function withTimeout(p, ms) {
   try { return await Promise.race([p, to]); } finally { clearTimeout(t); }
 }
 
-async function sendResend(subject, html, text) {
-  const [first, ...rest] = TO();
-  const payload = { from: process.env.EMAIL_FROM || 'Blue Star Leads <onboarding@resend.dev>', to: [first], subject, html, text };
-  if (rest.length) payload.cc = rest;
+async function sendResendTo(toList, ccList, subject, html, text) {
+  const payload = { from: process.env.EMAIL_FROM || 'Blue Star Leads <onboarding@resend.dev>', to: toList, subject, html, text };
+  if (ccList.length) payload.cc = ccList;
   const r = await withTimeout(fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
@@ -78,19 +89,30 @@ async function postFormSubmit(toEmail, ccList, subject, rows) {
   for (const [k, v] of rows) body[k] = String(v);
   const r = await withTimeout(fetch(`https://formsubmit.co/ajax/${encodeURIComponent(toEmail)}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Referer: process.env.PUBLIC_URL || 'https://bluestaradjusters.com', Origin: process.env.PUBLIC_URL || 'https://bluestaradjusters.com' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', Referer: `${FORM_ORIGIN}/`, Origin: FORM_ORIGIN },
     body: JSON.stringify(body),
   }), 8000);
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok && String(j.success) !== 'false', status: r.status, message: j.message || '' };
 }
 
-async function sendFormSubmit(subject, rows) {
+async function deliver(subject, html, text, rows) {
   const [first, ...rest] = TO();
+  if (process.env.RESEND_API_KEY) {
+    try { return await sendResendTo([first], rest, subject, html, text); }
+    catch (e) { console.warn('[notify] resend primary failed, falling back to formsubmit:', e.message); }
+  }
   const primary = await postFormSubmit(first, rest, subject, rows);
   if (primary.ok) return 'sent:formsubmit';
   if (rest.length && /activat/i.test(primary.message)) {
-    const backup = await postFormSubmit(rest[0], rest.slice(1), `[Pending ${first} activation] ${subject}`, rows);
+    const pendingSubject = `[Pending ${first} activation] ${subject}`;
+    if (process.env.RESEND_API_KEY) {
+      try {
+        await sendResendTo([rest[0]], rest.slice(1), pendingSubject, html, text);
+        return 'sent:resend_backup_pending_activation';
+      } catch (_) {}
+    }
+    const backup = await postFormSubmit(rest[0], rest.slice(1), pendingSubject, rows);
     if (backup.ok) return 'sent:formsubmit_backup_pending_activation';
   }
   throw new Error(`formsubmit ${primary.status}: ${primary.message}`.slice(0, 200));
@@ -98,8 +120,7 @@ async function sendFormSubmit(subject, rows) {
 
 async function notifyLead(lead) {
   const { subject, html, text, rows } = render(lead);
-  if (process.env.RESEND_API_KEY) return sendResend(subject, html, text);
-  return sendFormSubmit(subject, rows);
+  return deliver(subject, html, text, rows);
 }
 
 async function notifyCallback(info, slot, publicId) {
@@ -109,8 +130,7 @@ async function notifyCallback(info, slot, publicId) {
     : `Call time picked: ${times[0] || slot} (${info.name || 'lead'})`;
   const rows = [...times.map((t, i) => [times.length > 1 ? `Call time ${i + 1} (Pacific)` : 'Call time (Pacific)', t]), ['Name', info.name], ['Phone', info.phone], ['Lead ID', publicId]].filter(r => r[1]);
   const html = `<div style="font-family:Arial,sans-serif;font-size:15px"><p><b>The lead picked ${times.length > 1 ? 'call times. Call at any of them.' : 'a call time.'}</b></p>${rows.map(([k, v]) => `<p><b>${esc(k)}:</b> ${esc(v)}</p>`).join('')}</div>`;
-  if (process.env.RESEND_API_KEY) return sendResend(subject, html, rows.map(r => r.join(': ')).join('\n'));
-  return sendFormSubmit(subject, rows);
+  return deliver(subject, html, rows.map(r => r.join(': ')).join('\n'), rows);
 }
 
 // Someone typed a valid phone number but never pressed send.
@@ -134,8 +154,7 @@ async function notifyPartial(p) {
   const html = `<div style="font-family:Arial,sans-serif;font-size:15px;color:#0E1630"><p style="margin:0 0 12px"><b>Someone started the Quiz First form and left without sending it.</b></p>
 <table cellpadding="8" style="border-collapse:collapse;border:1px solid #D9DFEC">${rows.map(([k, v, href]) =>
     `<tr><td style="background:#F4F6FB;border:1px solid #D9DFEC;font-weight:bold">${esc(k)}</td><td style="border:1px solid #D9DFEC">${href ? `<a href="${esc(href)}">${esc(v)}</a>` : esc(v)}</td></tr>`).join('')}</table></div>`;
-  if (process.env.RESEND_API_KEY) return sendResend(subject, html, rows.map(r => `${r[0]}: ${r[1]}`).join('\n'));
-  return sendFormSubmit(subject, rows.map(r => [r[0], r[1]]));
+  return deliver(subject, html, rows.map(r => `${r[0]}: ${r[1]}`).join('\n'), rows.map(r => [r[0], r[1]]));
 }
 
 module.exports = { notifyLead, notifyCallback, notifyPartial, render, TO };

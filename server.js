@@ -462,8 +462,23 @@ app.get('/admin/test-email', async (req, res) => {
   } catch (e) { res.status(502).json({ ok: false, error: e.message }); }
 });
 
+const maskEmail = e => String(e || '').replace(/^(..).*(@.*)$/, '$1***$2');
 app.get('/health', async (req, res) => {
-  try { res.json({ ok: true, storage: await db.ping(), split_b: SPLIT_B, s3: s3.configured() }); }
+  try {
+    const recipients = TO();
+    res.json({
+      ok: true,
+      storage: await db.ping(),
+      split_b: SPLIT_B,
+      s3: s3.configured(),
+      email: {
+        provider: process.env.RESEND_API_KEY ? 'resend+formsubmit' : 'formsubmit',
+        from_domain: (process.env.EMAIL_FROM || 'onboarding@resend.dev').replace(/^.*@|>.*$/g, '').trim(),
+        to: maskEmail(recipients[0]),
+        cc: recipients.slice(1).map(maskEmail),
+      },
+    });
+  }
   catch (e) { res.status(503).json({ ok: false, error: e.message }); }
 });
 
