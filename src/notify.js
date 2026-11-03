@@ -91,7 +91,7 @@ async function postFormSubmit(toEmail, ccList, subject, rows) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', Referer: `${FORM_ORIGIN}/`, Origin: FORM_ORIGIN },
     body: JSON.stringify(body),
-  }), 8000);
+  }), 15000);
   const j = await r.json().catch(() => ({}));
   return { ok: r.ok && String(j.success) !== 'false', status: r.status, message: j.message || '' };
 }

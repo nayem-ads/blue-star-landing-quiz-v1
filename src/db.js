@@ -134,6 +134,14 @@ async function setEmailStatus(publicId, status, error) {
   await pool.query('UPDATE leads SET email_status=$2, email_error=$3 WHERE public_id=$1', [publicId, status, error ? String(error).slice(0, 500) : null]);
 }
 
+async function claimFailedEmails() {
+  if (!pool) return [];
+  const r = await pool.query(`UPDATE leads SET email_status='retrying' WHERE id IN (
+    SELECT id FROM leads WHERE is_spam=false AND email_status='failed' AND created_at > now() - interval '48 hours' ORDER BY created_at LIMIT 10
+  ) RETURNING *`);
+  return r.rows;
+}
+
 async function setCallback(publicId, slot) {
   if (!pool) {
     const row = fileLead(publicId); if (!row) return null;
@@ -269,4 +277,4 @@ async function ping() {
   return 'postgres';
 }
 
-module.exports = { init, findRecent, insertLead, setEmailStatus, setSyncStatus, getLead, setCallback, setClaimStatus, listFiles, addFiles, setFileStatus, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, closePartial, hasLead, listPartials };
+module.exports = { init, findRecent, insertLead, setEmailStatus, claimFailedEmails, setSyncStatus, getLead, setCallback, setClaimStatus, listFiles, addFiles, setFileStatus, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, closePartial, hasLead, listPartials };

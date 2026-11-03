@@ -261,17 +261,19 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
   }
 
   if (!spam) await db.convertPartials(lead.phone).catch(e => console.error('[partial] convert', e.message));
-  if (!spam) {
-    try {
-      const status = await notifyLead(saved).catch(async () => { await new Promise(r => setTimeout(r, 1500)); return notifyLead(saved); });
-      await db.setEmailStatus(saved.public_id, status, null).catch(() => {});
-    } catch (e) {
-      console.error('[lead] email failed', e.message);
-      await db.setEmailStatus(saved.public_id, 'failed', e.message).catch(() => {});
-    }
-  }
   reply(200, { ok: true, id: saved.public_id, first_name: lead.name.split(' ')[0] });
-  if (!spam) syncLead(saved);
+  if (!spam) {
+    syncLead(saved);
+    (async () => {
+      try {
+        const status = await notifyLead(saved).catch(async () => { await new Promise(r => setTimeout(r, 1500)); return notifyLead(saved); });
+        await db.setEmailStatus(saved.public_id, status, null).catch(() => {});
+      } catch (e) {
+        console.error('[lead] email failed', e.message);
+        await db.setEmailStatus(saved.public_id, 'failed', e.message).catch(() => {});
+      }
+    })();
+  }
 });
 
 app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, res) => {
@@ -399,7 +401,21 @@ app.post('/api/partial', express.text({ type: () => true, limit: '8kb' }), async
 });
 
 const PARTIAL_DELAY_MIN = Math.max(0, Number(process.env.PARTIAL_DELAY_MIN ?? 5));
+async function retryFailedEmails() {
+  let rows = [];
+  try { rows = await db.claimFailedEmails(); } catch (e) { return console.error('[email-retry] claim', e.message); }
+  for (const r of rows) {
+    try {
+      const status = await notifyLead(r);
+      await db.setEmailStatus(r.public_id, status, null);
+      console.log('[email-retry] sent', r.public_id, status);
+    } catch (e) {
+      await db.setEmailStatus(r.public_id, 'failed', e.message).catch(() => {});
+    }
+  }
+}
 async function sweepPartials() {
+  await retryFailedEmails();
   if (process.env.PARTIAL_ALERTS === 'off') return;
   let due = [];
   try { due = await db.claimDuePartials(PARTIAL_DELAY_MIN); } catch (e) { return console.error('[partial] sweep', e.message); }
