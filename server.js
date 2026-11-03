@@ -5,7 +5,7 @@ const express = require('express');
 const compression = require('compression');
 const db = require('./src/db');
 const { validateLead, validatePartial } = require('./src/validate');
-const { notifyLead, notifyCallback, notifyPartial } = require('./src/notify');
+const { notifyLead, notifyCallback, notifyPartial, TO } = require('./src/notify');
 const capi = require('./src/capi');
 const hubspot = require('./src/hubspot');
 const s3 = require('./src/s3');
@@ -457,7 +457,8 @@ app.get('/admin/test-email', async (req, res) => {
   if (!key || req.query.key !== key) return res.status(404).send('Not found');
   try {
     const status = await notifyLead({ public_id: 'test', name: 'Test Lead', phone: '(916) 555-0100', zip: '95811', loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6', page_variant: 'default', utm_source: 'test', created_at: new Date() });
-    res.json({ ok: true, status, to: (process.env.NOTIFY_TO || 'nayem.adsmanager@gmail.com') });
+    const [to, ...cc] = TO();
+    res.json({ ok: true, status, to, cc });
   } catch (e) { res.status(502).json({ ok: false, error: e.message }); }
 });
 

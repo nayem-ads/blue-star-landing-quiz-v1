@@ -4,7 +4,14 @@
 // 2. otherwise            -> FormSubmit (no account; first email asks you to click "Activate" once).
 const { LABELS } = require('./validate');
 
-const TO = () => (process.env.NOTIFY_TO || 'nayem.adsmanager@gmail.com,mike@bluestaradjusters.com').split(',').map(s => s.trim()).filter(Boolean);
+const PRIMARY_TO = (process.env.NOTIFY_PRIMARY || 'mike@bluestaradjusters.com').trim().toLowerCase();
+function TO() {
+  const list = (process.env.NOTIFY_TO || 'mike@bluestaradjusters.com,nayem.adsmanager@gmail.com')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const idx = list.findIndex(e => e.toLowerCase() === PRIMARY_TO);
+  if (idx > 0) list.unshift(list.splice(idx, 1)[0]);
+  return list;
+}
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -53,28 +60,40 @@ async function withTimeout(p, ms) {
 }
 
 async function sendResend(subject, html, text) {
+  const [first, ...rest] = TO();
+  const payload = { from: process.env.EMAIL_FROM || 'Blue Star Leads <onboarding@resend.dev>', to: [first], subject, html, text };
+  if (rest.length) payload.cc = rest;
   const r = await withTimeout(fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: process.env.EMAIL_FROM || 'Blue Star Leads <onboarding@resend.dev>', to: TO(), subject, html, text }),
+    body: JSON.stringify(payload),
   }), 8000);
   if (!r.ok) throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);
   return 'sent:resend';
 }
 
-async function sendFormSubmit(subject, rows) {
-  const [first, ...rest] = TO();
+async function postFormSubmit(toEmail, ccList, subject, rows) {
   const body = { _subject: subject, _template: 'table', _captcha: 'false' };
-  if (rest.length) body._cc = rest.join(',');
+  if (ccList.length) body._cc = ccList.join(',');
   for (const [k, v] of rows) body[k] = String(v);
-  const r = await withTimeout(fetch(`https://formsubmit.co/ajax/${encodeURIComponent(first)}`, {
+  const r = await withTimeout(fetch(`https://formsubmit.co/ajax/${encodeURIComponent(toEmail)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'application/json', Referer: process.env.PUBLIC_URL || 'https://bluestaradjusters.com', Origin: process.env.PUBLIC_URL || 'https://bluestaradjusters.com' },
     body: JSON.stringify(body),
   }), 8000);
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || String(j.success) === 'false') throw new Error(`formsubmit ${r.status}: ${j.message || ''}`.slice(0, 200));
-  return 'sent:formsubmit';
+  return { ok: r.ok && String(j.success) !== 'false', status: r.status, message: j.message || '' };
+}
+
+async function sendFormSubmit(subject, rows) {
+  const [first, ...rest] = TO();
+  const primary = await postFormSubmit(first, rest, subject, rows);
+  if (primary.ok) return 'sent:formsubmit';
+  if (rest.length && /activat/i.test(primary.message)) {
+    const backup = await postFormSubmit(rest[0], rest.slice(1), `[Pending ${first} activation] ${subject}`, rows);
+    if (backup.ok) return 'sent:formsubmit_backup_pending_activation';
+  }
+  throw new Error(`formsubmit ${primary.status}: ${primary.message}`.slice(0, 200));
 }
 
 async function notifyLead(lead) {
@@ -119,4 +138,4 @@ async function notifyPartial(p) {
   return sendFormSubmit(subject, rows.map(r => [r[0], r[1]]));
 }
 
-module.exports = { notifyLead, notifyCallback, notifyPartial, render };
+module.exports = { notifyLead, notifyCallback, notifyPartial, render, TO };
