@@ -276,6 +276,118 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
   }
 });
 
+// ---------- Main website (bluestaradjusters.com) form handler ----------
+const SITE_ORIGINS = new Set(['https://bluestaradjusters.com', 'https://www.bluestaradjusters.com', 'http://localhost:4321']);
+const STATE_ABBR = { California: 'CA', Nevada: 'NV', Oregon: 'OR', Washington: 'WA', Arizona: 'AZ', Colorado: 'CO' };
+function siteCors(req, res, next) {
+  const o = req.get('origin') || '';
+  if (SITE_ORIGINS.has(o)) res.set({ 'Access-Control-Allow-Origin': o, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Accept', Vary: 'Origin' });
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  next();
+}
+app.options('/api/site-lead', siteCors);
+app.post('/api/site-lead', siteCors, async (req, res) => {
+  const wantJson = /application\/json/i.test(req.get('accept') || '');
+  let fields = {}, attachments = [];
+  try {
+    const ct = req.get('content-type') || '';
+    if (/application\/json/i.test(ct)) {
+      const raw = await new Response(require('stream').Readable.toWeb(req)).text();
+      fields = JSON.parse(raw || '{}');
+    } else {
+      const webReq = new Request('http://localhost/api/site-lead', { method: 'POST', headers: req.headers, body: require('stream').Readable.toWeb(req), duplex: 'half' });
+      const fd = await webReq.formData();
+      for (const [k, v] of fd.entries()) {
+        if (v && typeof v === 'object' && typeof v.arrayBuffer === 'function') {
+          if (v.size > 0 && v.size <= 15 * 1024 * 1024 && attachments.length < 5) {
+            const buf = Buffer.from(await v.arrayBuffer());
+            attachments.push({ filename: String(v.name || 'document').slice(0, 120), content: buf.toString('base64') });
+          }
+        } else {
+          fields[k] = String(v ?? '');
+        }
+      }
+    }
+  } catch (e) {
+    return res.status(400).json({ ok: false, error: 'Invalid submission.' });
+  }
+
+  const rawNext = String(fields._next || 'https://bluestaradjusters.com/free-claim-review/thank-you/');
+  const safeNext = /^https:\/\/(www\.)?bluestaradjusters\.com\//i.test(rawNext) ? rawNext : 'https://bluestaradjusters.com/free-claim-review/thank-you/';
+  const finish = (code, obj) => wantJson ? res.status(code).json(obj) : res.redirect(303, safeNext);
+
+  if (fields._honey) return finish(200, { ok: true });
+  const ip = clientIp(req);
+  if (limited(ip)) return wantJson ? res.status(429).json({ ok: false, error: 'Too many attempts. Please call (888) 971-2524.' }) : res.redirect(303, safeNext);
+
+  const name = String(fields.Name || fields.name || '').trim().slice(0, 80);
+  let digits = String(fields.Phone || fields.phone || '').replace(/\D/g, '');
+  if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
+  if (!name || digits.length < 10) return wantJson ? res.status(400).json({ ok: false, error: 'Name and 10-digit phone required.' }) : res.redirect(303, 'https://bluestaradjusters.com/contact/');
+
+  const phone = digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : digits;
+  const email = String(fields.Email || fields.email || '').trim().slice(0, 200) || null;
+  const stateRaw = String(fields['Property state'] || fields.state || '').trim();
+  const propState = STATE_ABBR[stateRaw] || (/^[A-Z]{2}$/i.test(stateRaw) ? stateRaw.toUpperCase() : '');
+  const whatRaw = String(fields['What happened'] || fields['Claim type'] || '').trim();
+  const lossType = /fire|wildfire/i.test(whatRaw) ? 'fire' : /smoke/i.test(whatRaw) ? 'smoke' : /water/i.test(whatRaw) ? 'water' : /wind|hail|tree|storm/i.test(whatRaw) ? 'storm' : 'other';
+  const notes = String(fields['Anything we should know'] || fields.Message || fields.notes || '').trim().slice(0, 1000) || null;
+  const formLoc = String(fields['Form location'] || 'bluestaradjusters.com').trim().slice(0, 120);
+  const landingUrl = String(fields.landing_url || req.get('referer') || 'https://bluestaradjusters.com/').slice(0, 1000);
+
+  let u = null;
+  try { u = new URL(landingUrl); } catch (_) {}
+  const q = k => (u && u.searchParams.get(k)) || '';
+
+  const lead = {
+    source: 'website',
+    form_location: formLoc,
+    loss_type: lossType,
+    loss_label: whatRaw || null,
+    owner: /commercial/i.test(whatRaw) ? 'landlord' : 'own_home',
+    claim_status: null,
+    loss_timing: null,
+    name,
+    phone,
+    email,
+    address: stateRaw || null,
+    property_state: propState || null,
+    zip: null,
+    notes,
+    attachment_names: attachments.length ? attachments.map(a => a.filename).join(', ') : null,
+    page_variant: 'website',
+    utm_source: String(fields.utm_source || q('utm_source') || '').slice(0, 300) || null,
+    utm_medium: String(fields.utm_medium || q('utm_medium') || '').slice(0, 300) || null,
+    utm_campaign: String(fields.utm_campaign || q('utm_campaign') || '').slice(0, 300) || null,
+    utm_term: String(fields.utm_term || q('utm_term') || '').slice(0, 300) || null,
+    utm_content: String(fields.utm_content || q('utm_content') || '').slice(0, 300) || null,
+    gclid: String(fields.gclid || q('gclid') || '').slice(0, 300) || null,
+    fbclid: String(fields.fbclid || q('fbclid') || '').slice(0, 300) || null,
+    landing_url: landingUrl,
+    referrer: String(fields.referrer || '').slice(0, 1000) || null,
+    ip,
+    user_agent: String(req.get('user-agent') || '').slice(0, 400),
+    is_spam: false,
+  };
+
+  let saved;
+  try { saved = await db.insertLead(lead); }
+  catch (e) { saved = { ...lead, public_id: 'unsaved-' + Date.now() }; }
+
+  finish(200, { ok: true, id: saved.public_id, redirect: safeNext });
+  const enriched = { ...saved, form_location: formLoc, loss_label: whatRaw || null, property_state: propState || null, attachment_names: lead.attachment_names };
+  hubspot.pushLead(enriched).then(s => db.setSyncStatus(saved.public_id, 'hubspot_status', s)).catch(() => {});
+  (async () => {
+    try {
+      const status = await notifyLead(enriched, { attachments });
+      await db.setEmailStatus(saved.public_id, status, null).catch(() => {});
+    } catch (e) {
+      console.error('[site-lead] email failed', e.message);
+      await db.setEmailStatus(saved.public_id, 'failed', e.message).catch(() => {});
+    }
+  })();
+});
+
 app.post('/api/lead/:id/callback', express.json({ limit: '4kb' }), async (req, res) => {
   const id = String(req.params.id);
   // One or more call times: { slots: [...] } from the multi picker, or { slot } from older pages.
@@ -488,8 +600,8 @@ app.get('/health', async (req, res) => {
       split_b: SPLIT_B,
       s3: s3.configured(),
       email: {
-        provider: process.env.RESEND_API_KEY ? 'resend+formsubmit' : 'formsubmit',
-        from_domain: (process.env.EMAIL_FROM || 'onboarding@resend.dev').replace(/^.*@|>.*$/g, '').trim(),
+        provider: process.env.RESEND_API_KEY ? 'resend' : 'formsubmit',
+        from: (process.env.EMAIL_FROM || 'Blue Star Adjusters <lead@bluestaradjusters.com>').replace(/^.*</, '').replace(/>.*$/, '').trim(),
         to: maskEmail(recipients[0]),
         cc: recipients.slice(1).map(maskEmail),
       },
