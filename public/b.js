@@ -3,7 +3,7 @@
   'use strict';
   var d = document, w = window, body = d.body;
   var KEY = 'bs_b_v1';
-  var TRACK = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid'];
+  var TRACK = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'hsa_cam', 'hsa_grp', 'hsa_ad', 'hsa_kw', 'matchtype', 'device'];
   var LOSS = { fire: 1, smoke: 1, water: 1, storm: 1, hail: 1, denied: 1, other: 1 };
   var CALL = 'Please try again or call toll free (888) 971-2524.';
   function load() { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
@@ -35,7 +35,7 @@
   if (!state.pid) state.pid = (w.crypto && w.crypto.randomUUID) ? w.crypto.randomUUID() : 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
   save();
   try {
-    if (!qs.get('state') && !/(?:^|;\s*)bs_st=(wa|nv|co|ca)\b/.test(d.cookie) && Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
+    if (!qs.get('state') && !/(?:^|;\s*)bs_st=(wa|nv|co|or|ca)\b/.test(d.cookie) && Intl.DateTimeFormat().resolvedOptions().timeZone === 'America/Phoenix') {
       d.cookie = 'bs_st=az; Max-Age=7776000; Path=/; SameSite=Lax';
       d.querySelectorAll('.brand span,.checks li,.foot').forEach(function (el) {
         if (el.innerHTML.indexOf('6015234') > -1 || el.innerHTML.indexOf('Licensed CA') > -1) {
@@ -272,8 +272,35 @@
     post('/api/lead', payload).then(function (j) {
       if (j.ok) {
         state.lead_id = j.id; state.first_name = j.first_name || ''; state.lead_phone = digitsOf(state.phone);
+        var e164 = state.lead_phone.length === 10 ? '+1' + state.lead_phone : '';
+        state.done_phone = e164;
+        try {
+          var qMirror = JSON.parse(sessionStorage.getItem('bs_quiz_v1') || '{}');
+          qMirror.done_phone = e164; qMirror.name = state.name || ''; qMirror.zip = state.zip || '';
+          sessionStorage.setItem('bs_quiz_v1', JSON.stringify(qMirror));
+        } catch (err) {}
         state.fired = state.fired || {};
-        if (!state.fired[j.id]) { state.fired[j.id] = 1; save(); dl('generate_lead', { lead_id: j.id, loss_type: state.loss_type, claim_status: '', form: 'form' }); }
+        if (!state.fired[j.id]) {
+          state.fired[j.id] = 1; save();
+          var nParts = String(state.name || '').trim().split(/\s+/);
+          dl('generate_lead', {
+            lead_id: j.id,
+            transaction_id: j.id,
+            loss_type: state.loss_type,
+            claim_status: '',
+            form: 'form',
+            phone_e164: e164,
+            user_data: {
+              phone_number: e164,
+              address: {
+                first_name: nParts[0] || '',
+                last_name: nParts.slice(1).join(' ') || '',
+                postal_code: state.zip || '',
+                country: 'US'
+              }
+            }
+          });
+        }
         save(); show('3', true);
       } else if (j.errors && (j.errors.loss_type || j.errors.name || j.errors.phone || j.errors.zip || j.errors.address)) {
         show('1', true); markBad(j.errors);

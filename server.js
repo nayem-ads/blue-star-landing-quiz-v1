@@ -102,6 +102,15 @@ const HEADLINES = {
   'two-adj': 'The insurer’s adjuster works for them.|Hire a licensed public adjuster who works for you.',
   checklist: 'Before you cash that insurance check,|have a licensed public adjuster review it free.',
   'case-proof': 'Insurer offered $17K for smoke.|Get your claim checked before you settle.',
+  // Google Search exact-match ?h=pa* variants
+  pa: 'Licensed public adjuster on your side.|Get a free second opinion.',
+  'pa-fire': 'Fire or wildfire smoke claim?|Have a senior public adjuster check every line.',
+  'pa-smoke': 'Hidden wildfire smoke or soot damage?|Get your attic and ducts checked free.',
+  'pa-hail': 'Hail or roof claim denied or underpaid?|Get a free senior adjuster review.',
+  'pa-water': 'Water damage or pipe burst offer too low?|Have a senior public adjuster price what was missed.',
+  'pa-denied': 'Property insurance claim denied or lowballed?|Get a free second opinion today.',
+  'pa-commercial': 'Commercial, HOA or large property claim?|Senior public adjusters lead every file.',
+  'pa-or': 'Independent Oregon public adjusters|representing property policyholders.',
 };
 const AD_H = { '04': 'rebuild', '07': 'calls', '08': 'restart', '29': 'code', '13': 'smoke-test', '14': 'smoke-test', '21': 'smoke-test', '30': 'pipe', '19': 'two', '20': 'sign', '17': 'own' };
 // app.js is versioned by content hash so a deploy can never pair new HTML with a cached old script.
@@ -128,14 +137,15 @@ const pixelHead = pixelOn
 const pixelBody = pixelOn && !gtmOnlyHead ? `<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${PIXEL}&ev=PageView&noscript=1"></noscript>` : '';
 const ROBOTS = process.env.ALLOW_INDEX === 'true' ? 'index,follow' : 'noindex,follow';
 
-// State-aware credentials & local message-match for WA, NV, CO, AZ, and CA ad traffic.
+// State-aware credentials & local message-match for WA, NV, CO, AZ, OR, and CA ad traffic.
 const STATE_CFG = {
-  az: { name: 'Arizona', code: 'AZ', lic: '3004469742', licLabel: 'AZ Firm License', dept: 'Arizona Department of Insurance and Financial Institutions', phoneEx: '(602) 555 0142', pill: 'Phoenix & East Valley · AZ Lic. 3004469742', eyebrow: 'Hail, wind or storm damage in Arizona?', serving: 'Serving homeowners and businesses across Arizona.' },
-  wa: { name: 'Washington', code: 'WA', lic: '1382428', licLabel: 'WA OIC License', dept: 'Washington Office of the Insurance Commissioner', phoneEx: '(509) 555 0142', pill: 'Spokane & Nine Mile Falls · WA Lic. 1382428', eyebrow: 'Fire or smoke damage in Spokane County?', serving: 'Serving homeowners and businesses across Washington.' },
-  nv: { name: 'Nevada', code: 'NV', lic: '4263596', licLabel: 'NV DOI License', dept: 'Nevada Division of Insurance', phoneEx: '(775) 555 0142', pill: 'NW Reno & North Valleys · NV Lic. 4263596', eyebrow: 'Wildfire smoke or ash damage in Reno?', serving: 'Serving homeowners and businesses across Nevada.' },
-  co: { name: 'Colorado', code: 'CO', lic: '969283', licLabel: 'CO DORA License', dept: 'Colorado Division of Insurance', phoneEx: '(303) 555 0142', pill: 'Denver & Aurora Homeowners · CO Lic. 969283', eyebrow: 'Hail or storm damage in Denver or Aurora?', serving: 'Serving homeowners across Colorado.' },
+  az: { name: 'Arizona', code: 'AZ', lic: '3004469742', licLabel: 'AZ Firm License', dept: 'Arizona Department of Insurance and Financial Institutions', phoneEx: '(602) 555 0142', zipEx: '85255', pill: 'Phoenix & East Valley · AZ Lic. 3004469742', eyebrow: 'Hail, wind or storm damage in Arizona?', serving: 'Serving homeowners and businesses across Arizona.' },
+  wa: { name: 'Washington', code: 'WA', lic: '1382428', licLabel: 'WA OIC License', dept: 'Washington Office of the Insurance Commissioner', phoneEx: '(206) 555 0142', zipEx: '98004', pill: 'Washington Policyholders · WA Lic. 1382428', eyebrow: 'Property insurance claim in Washington?', serving: 'Serving homeowners and businesses across Washington.' },
+  nv: { name: 'Nevada', code: 'NV', lic: '4263596', licLabel: 'NV DOI License', dept: 'Nevada Division of Insurance', phoneEx: '(702) 555 0142', zipEx: '89135', pill: 'Nevada Policyholders · NV Lic. 4263596', eyebrow: 'Property insurance claim in Nevada?', serving: 'Serving homeowners and businesses across Nevada.' },
+  co: { name: 'Colorado', code: 'CO', lic: '969283', licLabel: 'CO DORA License', dept: 'Colorado Division of Insurance', phoneEx: '(303) 555 0142', zipEx: '80111', pill: 'Colorado Policyholders · CO Lic. 969283', eyebrow: 'Commercial, HOA or property claim in Colorado?', serving: 'Serving homeowners and businesses across Colorado.' },
+  or: { name: 'Oregon', code: 'OR', lic: '3004448214', licLabel: 'OR Firm License', dept: 'Oregon Division of Financial Regulation', phoneEx: '(503) 555 0142', zipEx: '97034', pill: 'Oregon Policyholders · OR Lic. 3004448214', eyebrow: 'Policyholder claim representation in Oregon', serving: 'Serving homeowners and businesses across Oregon.' },
 };
-const stCookie = req => (/(?:^|;\s*)bs_st=(az|wa|nv|co|ca)\b/.exec(req.get('cookie') || '') || [])[1] || '';
+const stCookie = req => (/(?:^|;\s*)bs_st=(az|wa|nv|co|or|ca)\b/.exec(req.get('cookie') || '') || [])[1] || '';
 function detectState(req, res) {
   if (res && req.query.fbclid && !/(?:^|;\s*)_fbc=/.test(req.get('cookie') || '')) {
     const cleanFb = String(req.query.fbclid).replace(/[^A-Za-z0-9._-]/g, '').slice(0, 400);
@@ -145,9 +155,10 @@ function detectState(req, res) {
   const hay = `${req.query.utm_campaign || ''} ${req.query.hsa_cam || ''} ${req.query.hsa_grp || ''}`;
   let st = '';
   const tok = re => new RegExp(`(?:^|[^a-z0-9])(?:${re})(?:$|[^a-z0-9])`, 'i');
-  if (/^(az|wa|nv|co|ca)$/.test(explicit)) st = explicit;
-  else if (tok('wa|spokane|nine[-_ ]?mile').test(hay)) st = 'wa';
-  else if (tok('nv|reno|washoe|hawk').test(hay)) st = 'nv';
+  if (/^(az|wa|nv|co|or|ca)$/.test(explicit)) st = explicit;
+  else if (tok('or|oregon|portland|bend').test(hay)) st = 'or';
+  else if (tok('wa|spokane|nine[-_ ]?mile|seattle').test(hay)) st = 'wa';
+  else if (tok('nv|reno|washoe|hawk|vegas').test(hay)) st = 'nv';
   else if (tok('co|colorado|denver|aurora').test(hay)) st = 'co';
   else if (tok('az|arizona|phoenix|mesa|glendale|120248791830950534|120248791831660534').test(hay)) st = 'az';
   const prev = stCookie(req);
@@ -155,8 +166,8 @@ function detectState(req, res) {
   return st || prev || 'ca';
 }
 function stateSwap(html, st, req) {
+  const areaHay = `${req ? (req.query.area || '') : ''} ${req ? (req.query.utm_campaign || '') : ''} ${req ? (req.query.hsa_cam || '') : ''} ${req ? (req.query.hsa_grp || '') : ''}`;
   if (st === 'ca' || !STATE_CFG[st]) {
-    const areaHay = `${req ? (req.query.area || '') : ''} ${req ? (req.query.utm_campaign || '') : ''}`;
     if (req && /(?:^|[^a-z0-9])(oc|norte|sanclemente|sjc)(?:$|[^a-z0-9])/i.test(areaHay)) {
       return html
         .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', '<p class="pill"><span class="dot" aria-hidden="true"></span>San Clemente &amp; South OC · CA Lic. 6015234</p>')
@@ -167,12 +178,21 @@ function stateSwap(html, st, req) {
       return html
         .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', '<p class="pill"><span class="dot" aria-hidden="true"></span>Altadena, Pasadena &amp; Palisades · CA Lic. 6015234</p>')
         .replaceAll('<p class="eyebrow">Home or business damaged?</p>', '<p class="eyebrow">Eaton or Palisades fire &amp; smoke claim?</p>')
-        .replaceAll('(415) 555 0142', '(626) 555 0142');
+        .replaceAll('(415) 555 0142', '(626) 555 0142')
+        .replaceAll('(e.g. 92675)', '(e.g. 90272)');
     }
     return html;
   }
-  const s = STATE_CFG[st];
-  return html
+  const base = STATE_CFG[st];
+  let s = base;
+  if (st === 'wa' && /(?:^|[^a-z0-9])(spokane|nine[-_ ]?mile)(?:$|[^a-z0-9])/i.test(areaHay)) {
+    s = { ...base, phoneEx: '(509) 555 0142', zipEx: '99208', pill: 'Spokane & Nine Mile Falls · WA Lic. 1382428', eyebrow: 'Fire or smoke damage in Spokane County?' };
+  } else if (st === 'nv' && /(?:^|[^a-z0-9])(reno|washoe|hawk)(?:$|[^a-z0-9])/i.test(areaHay)) {
+    s = { ...base, phoneEx: '(775) 555 0142', zipEx: '89519', pill: 'NW Reno & North Valleys · NV Lic. 4263596', eyebrow: 'Wildfire smoke or ash damage in Reno?' };
+  } else if (st === 'co' && /(?:^|[^a-z0-9])(aurora)(?:$|[^a-z0-9])/i.test(areaHay)) {
+    s = { ...base, pill: 'Denver & Aurora Homeowners · CO Lic. 969283', eyebrow: 'Hail or storm damage in Denver or Aurora?' };
+  }
+  let out = html
     .replaceAll('A licensed California public adjuster reviews your claim for free. Answer 4 quick questions. CA DOI License 6015234.', `A licensed ${s.name} public adjuster reviews your claim for free. Answer 4 quick questions. ${s.licLabel} ${s.lic}.`)
     .replaceAll('CA Lic. 6015234', `${s.code} Lic. ${s.lic}`)
     .replaceAll('Licensed California public adjuster · CA DOI License No. 6015234', `Licensed ${s.name} public adjuster · ${s.licLabel} No. ${s.lic}`)
@@ -190,7 +210,12 @@ function stateSwap(html, st, req) {
     .replaceAll('Serving homeowners and businesses across California.', s.serving)
     .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', `<p class="pill"><span class="dot" aria-hidden="true"></span>${s.pill}</p>`)
     .replaceAll('<p class="eyebrow">Home or business damaged?</p>', `<p class="eyebrow">${s.eyebrow}</p>`)
-    .replaceAll('(415) 555 0142', s.phoneEx);
+    .replaceAll('(415) 555 0142', s.phoneEx)
+    .replaceAll('(e.g. 92675)', `(e.g. ${s.zipEx})`);
+  if (st === 'or') {
+    out = out.replaceAll('Home or business damaged? Get a free second opinion on your claim from a senior licensed public adjuster.', 'Independent Oregon public adjusters representing property policyholders. Request a free policy and claim review.');
+  }
+  return out;
 }
 
 function resolveHeadline(req, st, forPageB) {

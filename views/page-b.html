@@ -32,7 +32,7 @@ button,input,select{font:inherit;color:inherit}
 [hidden]{display:none!important}
 :focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 /* header */
-.top{background:#fff;border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
+.top{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px);box-shadow:0 2px 10px rgba(8,29,94,.05)}
 .top .wrap{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
 .brand{display:flex;flex-direction:column;gap:3px;text-decoration:none}
 .brand img{width:136px;height:30px;display:block;object-fit:contain;object-position:left center}
@@ -213,6 +213,7 @@ h2:focus,h2:focus-visible{outline:none}
   <ul class="checks">
    <li><svg class="ic"><use href="#i-check"/></svg>No upfront cost</li>
    <li><svg class="ic"><use href="#i-check"/></svg>Licensed CA public adjuster</li>
+   <li><svg class="ic"><use href="#i-check"/></svg>Direct firm, never a lead broker</li>
    <li><svg class="ic"><use href="#i-check"/></svg>We represent you, not the insurer</li>
   </ul>
  </div>
