@@ -43,9 +43,12 @@ button,input,select{font:inherit;color:inherit}
 .pill b{display:block;font-family:var(--fh);font-weight:700;font-size:15px;line-height:1.2}
 /* step 1 */
 .hero{padding:10px 20px 0}
-.eyebrow{margin:0 0 4px;font-family:var(--fh);font-weight:600;font-size:16px;color:var(--royal)}
-h1{margin:0;font-family:var(--fh);font-weight:700;font-size:23px;line-height:1.16;letter-spacing:-.01em}
-.trust{padding:10px 20px 0;display:flex;flex-direction:column;gap:8px}
+.eyebrow{margin:0 0 4px;font-family:var(--fh);font-weight:600;font-size:15.5px;color:var(--royal)}
+h1{margin:0;font-family:var(--fh);font-weight:700;font-size:22.5px;line-height:1.16;letter-spacing:-.01em}
+h1 .hl{color:var(--royal)}
+.trust{padding:8px 20px 0;display:flex;flex-direction:column;gap:7px}
+.proof-mini{display:flex;align-items:center;gap:7px;background:var(--mintbg);border:1px solid var(--mint);border-radius:10px;padding:7px 11px;font-size:12.5px;font-weight:600;line-height:1.3}
+.proof-mini .ic{width:15px;height:15px;color:var(--green);stroke-width:2.5}
 .prin{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .who{display:flex;align-items:center;gap:10px}
 .who img{width:44px;height:44px;border-radius:50%;object-fit:cover}
@@ -168,7 +171,7 @@ h2:focus,h2:focus-visible{outline:none}
 @media (min-width:600px){.screen,.hero,.trust,.formwrap,.proof,.foot{max-width:480px;margin-left:auto;margin-right:auto}}
 </style>
 </head>
-<body data-variant="b" data-ty="{{TY}}">
+<body data-variant="{{VARIANT}}" data-ty="{{TY}}">
 {{GTM_BODY}}
 {{PIXEL_BODY}}
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -199,9 +202,10 @@ h2:focus,h2:focus-visible{outline:none}
 <section id="s1" class="on" data-step="1" aria-labelledby="h1">
  <div class="hero">
   <p class="eyebrow">Home or business damaged?</p>
-  <h1 id="h1">Get a free second opinion on your claim from a senior licensed public adjuster.</h1>
+  <h1 id="h1">{{H1}}</h1>
  </div>
  <div class="trust">
+  <div class="proof-mini"><svg class="ic"><use href="#i-check"/></svg><span>Recent smoke claim: Offered <b>$17,000</b> &rarr; Settled <b>~$1.1M</b></span></div>
   <div class="prin">
    <div class="who"><img src="/img/mike-176.webp" width="44" height="44" alt="Michael Rapport"><div><b>Michael Rapport</b><span>Founding Principal. Leads every claim.</span></div></div>
    <div class="logos"><img src="/img/logo-napia.webp" height="34" alt="NAPIA member"><img src="/img/logo-pcapia.webp" height="34" alt="PCAPIA member"></div>
@@ -214,10 +218,10 @@ h2:focus,h2:focus-visible{outline:none}
  </div>
  <div class="formwrap">
   <form class="card" id="f1" method="post" action="/api/lead" novalidate>
-   <div class="hint"><span class="bars" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span>Step 1 of 4 · Takes about a minute</div>
+   <div class="hint"><span class="bars" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span>Free Homeowner Claim Check · Takes 30 seconds</div>
    <div class="sum" id="sum" role="alert" hidden><svg class="ic"><use href="#i-alert"/></svg><span id="sum-t"></span></div>
    <div class="fld" data-f="loss_type">
-    <div class="box"><label for="f-loss">What happened to your property?</label><select id="f-loss" name="loss_type" required aria-describedby="e-loss"><option value="">Select one</option><option value="fire">Fire</option><option value="smoke">Smoke damage</option><option value="water">Water or a leak</option><option value="storm">Hail, storm or tree</option><option value="denied">Claim denied</option><option value="other">Something else</option></select><svg class="ic"><use href="#i-chev"/></svg></div>
+    <div class="box"><label for="f-loss">What happened to your property?</label><select id="f-loss" name="loss_type" required aria-describedby="e-loss"><option value="">Select one</option><option value="fire">Fire</option><option value="smoke">Smoke damage</option><option value="hail">Hail or wind damage</option><option value="storm">Storm or tree damage</option><option value="water">Water or a leak</option><option value="denied">Claim denied</option><option value="other">Something else</option></select><svg class="ic"><use href="#i-chev"/></svg></div>
     <span class="msg" id="e-loss"><svg class="ic"><use href="#i-alert"/></svg>Please choose what happened.</span>
    </div>
    <div class="fld" data-f="name">
@@ -228,18 +232,16 @@ h2:focus,h2:focus-visible{outline:none}
     <div class="box"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" enterkeyhint="next" placeholder="(415) 555 0142" required aria-describedby="e-phone"></div>
     <span class="msg" id="e-phone"><svg class="ic"><use href="#i-alert"/></svg>Please enter a 10 digit US mobile number.</span>
    </div>
-   <div class="fld" data-f="address">
-    <div class="box"><label for="f-address">Property address</label><input id="f-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" enterkeyhint="go" placeholder="Start typing your street address" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-address-list" aria-describedby="e-address"></div>
-    <ul class="ac-list" id="f-address-list" role="listbox" aria-label="Address suggestions" hidden></ul>
-    <input type="hidden" name="zip" value="">
-    <span class="msg" id="e-address"><svg class="ic"><use href="#i-alert"/></svg>Please enter the property address with the street number.</span>
+   <div class="fld" data-f="zip">
+    <div class="box"><label for="f-zip">Property ZIP code</label><input id="f-zip" name="zip" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="postal-code" enterkeyhint="go" placeholder="5-digit ZIP code (e.g. 92675)" required aria-describedby="e-zip"></div>
+    <span class="msg" id="e-zip"><svg class="ic"><use href="#i-alert"/></svg>Please enter the 5-digit property ZIP code.</span>
    </div>
    <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
    <p class="oneline">You agree we may call or text about this claim.</p>
-   <button class="btn" type="submit" id="go1">Start my free review<svg class="ic"><use href="#i-arrow"/></svg></button>
+   <button class="btn" type="submit" id="go1">Check My Claim Free<svg class="ic"><use href="#i-arrow"/></svg></button>
    <p class="consent">By tapping, you agree Blue Star Adjusters may call or text you about this claim, including by automated means. Consent isn’t a condition of service. Message and data rates may apply. We don’t sell your details. <a href="/privacy">Privacy</a>.</p>
   </form>
-  <p class="note"><svg class="ic"><use href="#i-phone"/></svg>A licensed adjuster calls you back, usually within one business day.</p>
+  <p class="note"><svg class="ic"><use href="#i-phone"/></svg>A senior licensed adjuster reviews your claim — paid only if we recover more.</p>
  </div>
  <div class="proof"><div><p><svg class="ic"><use href="#i-check"/></svg>Smoke damage: offered $17,000. Settled for about $1.1 million.</p><small>Results reflect specific losses and policies. Past results don’t guarantee a similar outcome.</small></div></div>
  <p class="foot">Blue Star Adjusters · CA DOI License No. 6015234 · <a href="/privacy">Privacy</a></p>
@@ -266,11 +268,15 @@ h2:focus,h2:focus-visible{outline:none}
  <button class="btn2" type="button" id="own-back">I own it. Go back</button>
 </section>
 
-<!-- Step 3: claim status -->
+<!-- Step 3: claim status + optional street address -->
 <section class="screen" id="s3" data-step="3" aria-labelledby="h3">
  <div class="bp"><button class="back" type="button" data-back><svg class="ic"><use href="#i-back"/></svg>Back</button><span class="prog"><span class="bars" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>Step 3 of 4</span></div>
  <h2 id="h3" tabindex="-1">Where is your claim right now?</h2>
- <p class="sub">Pick the closest one. Your adjuster asks the rest on the call.</p>
+ <div class="fld" data-f="address">
+  <div class="box"><label for="f-address">Property street address (optional)</label><input id="f-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" enterkeyhint="done" placeholder="Helps us pull storm &amp; parcel data" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-address-list"></div>
+  <ul class="ac-list" id="f-address-list" role="listbox" aria-label="Address suggestions" hidden></ul>
+ </div>
+ <p class="sub">Tap your current claim stage to continue:</p>
  <button type="button" class="opt" data-k="claim_status" data-v="low_offer">Got an offer, it looks low<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
  <button type="button" class="opt" data-k="claim_status" data-v="denied">Denied, in full or in part<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
  <button type="button" class="opt" data-k="claim_status" data-v="waiting">Filed, still waiting<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>

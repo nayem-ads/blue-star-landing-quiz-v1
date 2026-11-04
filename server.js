@@ -11,13 +11,46 @@ const hubspot = require('./src/hubspot');
 const s3 = require('./src/s3');
 
 // After a lead is saved: server Lead event to Meta, contact + deal to HubSpot. Never blocks the visitor.
+const isTestName = name => /^\s*\[?test(\b|\s|\]|$)/i.test(String(name || ''));
 function syncLead(lead) {
-  capi.sendLead(lead)
-    .then(s => { console.log('[capi]', lead.public_id, s); return db.setSyncStatus(lead.public_id, 'capi_status', s); })
-    .catch(e => console.error('[capi]', e.message));
+  if (isTestName(lead.name)) {
+    db.setSyncStatus(lead.public_id, 'capi_status', 'skipped: test lead').catch(() => {});
+  } else {
+    capi.sendLead(lead)
+      .then(s => { console.log('[capi]', lead.public_id, s); return db.setSyncStatus(lead.public_id, 'capi_status', s); })
+      .catch(e => console.error('[capi]', e.message));
+  }
   hubspot.pushLead(lead)
     .then(s => { console.log('[hubspot]', lead.public_id, s); return db.setSyncStatus(lead.public_id, 'hubspot_status', s); })
     .catch(e => console.error('[hubspot]', e.message));
+}
+
+// Smart 20s email hold for Page B multi-step leads so Step 3 claim_status + street address land in the single email to Mike.
+const pendingEmails = new Map();
+async function flushLeadEmail(publicId, fallbackLead) {
+  const timer = pendingEmails.get(publicId);
+  if (timer) { clearTimeout(timer); pendingEmails.delete(publicId); }
+  const lead = (await db.getLead(publicId).catch(() => null)) || fallbackLead;
+  if (!lead) return;
+  if (lead.email_status && lead.email_status !== 'pending' && lead.email_status !== 'failed') return;
+  try {
+    const status = await notifyLead(lead).catch(async () => { await new Promise(r => setTimeout(r, 1500)); return notifyLead(lead); });
+    await db.setEmailStatus(publicId, status, null).catch(() => {});
+  } catch (e) {
+    console.error('[lead] email failed', e.message);
+    await db.setEmailStatus(publicId, 'failed', e.message).catch(() => {});
+  }
+}
+function scheduleLeadEmail(saved, delayMs = 20000) {
+  if (!saved || !saved.public_id) return;
+  if (saved.source !== 'form' || String(saved.public_id).startsWith('unsaved-')) {
+    flushLeadEmail(saved.public_id, saved);
+    return;
+  }
+  db.setEmailStatus(saved.public_id, 'pending', null).catch(() => {});
+  const t = setTimeout(() => { pendingEmails.delete(saved.public_id); flushLeadEmail(saved.public_id, saved); }, delayMs);
+  if (t.unref) t.unref();
+  pendingEmails.set(saved.public_id, t);
 }
 
 const PORT = process.env.PORT || 3000;
@@ -75,17 +108,24 @@ const AD_H = { '04': 'rebuild', '07': 'calls', '08': 'restart', '29': 'code', '1
 const APP_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'app.js'))).digest('hex').slice(0, 10);
 const TEMPLATE = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8').replace('src="/app.js"', `src="/app.js?v=${APP_V}"`);
 const GTM = (process.env.GTM_ID || 'GTM-5246KXDV').trim();
-const gtmHead = /^GTM-[A-Z0-9]+$/.test(GTM)
+const CLARITY = (process.env.CLARITY_ID || 'ysedoup181').trim();
+const clarityHead = CLARITY !== 'off' && /^[a-z0-9]{6,20}$/i.test(CLARITY)
+  ? `<script>(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${CLARITY}");</script>`
+  : '';
+const gtmOnlyHead = /^GTM-[A-Z0-9]+$/.test(GTM)
   ? `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${GTM}');</script>`
   : '';
-const gtmBody = gtmHead ? `<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${GTM}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>` : '';
-// Meta Pixel. Override with META_PIXEL_ID in Railway, or set it to "off" to disable.
+const gtmHead = gtmOnlyHead + clarityHead;
+const gtmBody = gtmOnlyHead ? `<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${GTM}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>` : '';
+// Meta Pixel. GTM-5246KXDV already loads fbevents.js & fires PageView on 2836808853350981, so when GTM is active we only set up the fbq queue + _fbc cookie + disablePushState (eliminating duplicate PageView fires).
 const PIXEL = (process.env.META_PIXEL_ID || '2836808853350981').trim();
 const pixelOn = /^\d{10,20}$/.test(PIXEL);
 const pixelHead = pixelOn
-  ? `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');try{var m=/[?&]fbclid=([^&#]+)/.exec(location.search);if(m)document.cookie='_fbc=fb.1.'+Date.now()+'.'+decodeURIComponent(m[1])+'; Max-Age=7776000; Path=/; SameSite=Lax'}catch(e){}fbq.disablePushState=true;fbq('init','${PIXEL}');fbq('track','PageView');</script>`
+  ? (gtmOnlyHead
+      ? `<script>!function(f){if(f.fbq)return;var n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window);try{var m=/[?&]fbclid=([^&#]+)/.exec(location.search);if(m&&!/(?:^|;\\s*)_fbc=/.test(document.cookie))document.cookie='_fbc=fb.1.'+Date.now()+'.'+decodeURIComponent(m[1])+'; Max-Age=7776000; Path=/; SameSite=Lax'}catch(e){}fbq.disablePushState=true;</script>`
+      : `<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');try{var m=/[?&]fbclid=([^&#]+)/.exec(location.search);if(m&&!/(?:^|;\\s*)_fbc=/.test(document.cookie))document.cookie='_fbc=fb.1.'+Date.now()+'.'+decodeURIComponent(m[1])+'; Max-Age=7776000; Path=/; SameSite=Lax'}catch(e){}fbq.disablePushState=true;fbq('init','${PIXEL}');fbq('track','PageView');</script>`)
   : '';
-const pixelBody = pixelOn ? `<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${PIXEL}&ev=PageView&noscript=1"></noscript>` : '';
+const pixelBody = pixelOn && !gtmOnlyHead ? `<noscript><img height="1" width="1" style="display:none" alt="" src="https://www.facebook.com/tr?id=${PIXEL}&ev=PageView&noscript=1"></noscript>` : '';
 const ROBOTS = process.env.ALLOW_INDEX === 'true' ? 'index,follow' : 'noindex,follow';
 
 // State-aware credentials & local message-match for WA, NV, CO, AZ, and CA ad traffic.
@@ -97,7 +137,7 @@ const STATE_CFG = {
 };
 const stCookie = req => (/(?:^|;\s*)bs_st=(az|wa|nv|co|ca)\b/.exec(req.get('cookie') || '') || [])[1] || '';
 function detectState(req, res) {
-  if (res && req.query.fbclid) {
+  if (res && req.query.fbclid && !/(?:^|;\s*)_fbc=/.test(req.get('cookie') || '')) {
     const cleanFb = String(req.query.fbclid).replace(/[^A-Za-z0-9._-]/g, '').slice(0, 400);
     if (cleanFb) res.append('Set-Cookie', `_fbc=fb.1.${Date.now()}.${cleanFb}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
   }
@@ -116,11 +156,18 @@ function detectState(req, res) {
 }
 function stateSwap(html, st, req) {
   if (st === 'ca' || !STATE_CFG[st]) {
-    if (req && /(?:^|[^a-z0-9])(oc|norte|sanclemente|sjc)(?:$|[^a-z0-9])/i.test(`${req.query.area || ''} ${req.query.utm_campaign || ''}`)) {
+    const areaHay = `${req ? (req.query.area || '') : ''} ${req ? (req.query.utm_campaign || '') : ''}`;
+    if (req && /(?:^|[^a-z0-9])(oc|norte|sanclemente|sjc)(?:$|[^a-z0-9])/i.test(areaHay)) {
       return html
         .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', '<p class="pill"><span class="dot" aria-hidden="true"></span>San Clemente &amp; South OC · CA Lic. 6015234</p>')
         .replaceAll('<p class="eyebrow">Home or business damaged?</p>', '<p class="eyebrow">Norte Fire smoke damage in South Orange County?</p>')
         .replaceAll('(415) 555 0142', '(949) 555 0142');
+    }
+    if (req && /(?:^|[^a-z0-9])(la|eaton|palisades|altadena|pasadena|malibu)(?:$|[^a-z0-9])/i.test(areaHay)) {
+      return html
+        .replaceAll('<p class="pill"><span class="dot" aria-hidden="true"></span>For home and business owners</p>', '<p class="pill"><span class="dot" aria-hidden="true"></span>Altadena, Pasadena &amp; Palisades · CA Lic. 6015234</p>')
+        .replaceAll('<p class="eyebrow">Home or business damaged?</p>', '<p class="eyebrow">Eaton or Palisades fire &amp; smoke claim?</p>')
+        .replaceAll('(415) 555 0142', '(626) 555 0142');
     }
     return html;
   }
@@ -146,14 +193,22 @@ function stateSwap(html, st, req) {
     .replaceAll('(415) 555 0142', s.phoneEx);
 }
 
-function page(req, robots, st) {
-  // Meta LP campaign ads already carry utm_content=<ad number>, so the headline follows the ad without editing it.
+function resolveHeadline(req, st, forPageB) {
   const adKey = req.query.utm_campaign === 'bsa_lp_zips' ? AD_H[String(req.query.utm_content || '')] : '';
   const hailDefault = (st === 'az' || st === 'co') && !req.query.h && (!req.query.loss || req.query.loss === 'storm' || req.query.loss === 'hail') ? 'hail' : '';
   const key = String(req.query.h || adKey || hailDefault || req.query.loss || '').toLowerCase();
   const variant = HEADLINES[key] ? key : 'default';
+  const raw = variant === 'default' && forPageB
+    ? 'Get a free second opinion on your claim|from a senior licensed public adjuster.'
+    : HEADLINES[variant];
+  const h1 = raw.includes('|') ? raw.replace(/^(.*)\|(.*)$/, '$1 <span class="hl">$2</span>') : raw.replace('too low.', '<span class="hl">too low.</span>');
+  return { variant: variant === 'default' && forPageB ? 'b' : variant, h1 };
+}
+
+function page(req, robots, st) {
+  const { variant, h1 } = resolveHeadline(req, st, false);
   const html = TEMPLATE
-    .replaceAll('{{H1}}', HEADLINES[variant].includes('|') ? HEADLINES[variant].replace(/^(.*)\|(.*)$/, '$1 <span class="hl">$2</span>') : HEADLINES[variant].replace('too low.', '<span class="hl">too low.</span>'))
+    .replaceAll('{{H1}}', h1)
     .replaceAll('{{VARIANT}}', variant)
     .replaceAll('{{GTM_HEAD}}', gtmHead)
     .replaceAll('{{GTM_BODY}}', gtmBody)
@@ -163,22 +218,26 @@ function page(req, robots, st) {
   return stateSwap(html, st || 'ca', req);
 }
 
-// ---------- Page B (V5 multi-step) and the 50/50 split at / ----------
-// Sticky cookie bs_lp=a|b. ?lp=a or ?lp=b forces a page and resets the cookie. LP_SPLIT_B = percent sent to B (default 50, 0 turns B off).
+// ---------- Page B (1-screen direct homeowner claim check) — now default for all paid traffic unless ?lp=quiz ----------
 const B_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'b.js'))).digest('hex').slice(0, 10);
 const TEMPLATE_B = fs.readFileSync(path.join(__dirname, 'views', 'page-b.html'), 'utf8').replace('src="/b.js"', `src="/b.js?v=${B_V}"`);
 const rawSplit = String(process.env.LP_SPLIT_B ?? '').replace('%', '').trim().toLowerCase();
-const SPLIT_B = rawSplit === 'off' ? 0 : Math.max(0, Math.min(100, Number(rawSplit) > 0 ? Number(rawSplit) : 50));
+const SPLIT_B = rawSplit === 'off' ? 0 : (rawSplit !== '' && Number.isFinite(Number(rawSplit)) ? Math.max(0, Math.min(100, Number(rawSplit))) : 100);
 const lpCookie = req => (/(?:^|;\s*)bs_lp=([ab])\b/.exec(req.get('cookie') || '') || [])[1];
 function pickVariant(req, res) {
   const forced = String(req.query.lp || '').toLowerCase();
-  let v = forced === 'a' || forced === 'b' ? forced : lpCookie(req);
-  if (v !== 'a' && v !== 'b') v = Math.random() * 100 < SPLIT_B ? 'b' : 'a';
+  let v;
+  if (forced === 'quiz') v = 'a';
+  else if (forced === 'b' || forced === 'a') v = SPLIT_B === 0 ? 'a' : 'b';
+  else v = Math.random() * 100 < SPLIT_B ? 'b' : 'a';
   if (lpCookie(req) !== v) res.append('Set-Cookie', `bs_lp=${v}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
   return v;
 }
 function pageB(req, robots, ty, st) {
+  const { variant, h1 } = resolveHeadline(req, st, true);
   const html = TEMPLATE_B
+    .replaceAll('{{H1}}', h1)
+    .replaceAll('{{VARIANT}}', variant)
     .replaceAll('{{GTM_HEAD}}', gtmHead)
     .replaceAll('{{GTM_BODY}}', gtmBody)
     .replaceAll('{{PIXEL_HEAD}}', pixelHead)
@@ -241,8 +300,8 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
   const { ok, errors, lead } = validateLead(b);
   if (!ok) return reply(400, { ok: false, errors });
 
-  // Bots: hidden honeypot field filled, or the whole quiz done in under 3 seconds.
-  const spam = Boolean(b.company) || (Number(b.elapsed_ms) > 0 && Number(b.elapsed_ms) < 3000);
+  // Bots: hidden honeypot field filled, or multi-screen submission done in under 1.2 seconds.
+  const spam = Boolean(b.company) || (Number(b.elapsed_ms) > 0 && Number(b.elapsed_ms) < 1200);
   lead.is_spam = spam;
   lead.ip = ip;
   lead.user_agent = String(req.get('user-agent') || '').slice(0, 400);
@@ -264,15 +323,7 @@ app.post('/api/lead', express.json({ limit: '16kb' }), express.urlencoded({ exte
   reply(200, { ok: true, id: saved.public_id, first_name: lead.name.split(' ')[0] });
   if (!spam) {
     syncLead(saved);
-    (async () => {
-      try {
-        const status = await notifyLead(saved).catch(async () => { await new Promise(r => setTimeout(r, 1500)); return notifyLead(saved); });
-        await db.setEmailStatus(saved.public_id, status, null).catch(() => {});
-      } catch (e) {
-        console.error('[lead] email failed', e.message);
-        await db.setEmailStatus(saved.public_id, 'failed', e.message).catch(() => {});
-      }
-    })();
+    scheduleLeadEmail(saved);
   }
 });
 
@@ -422,14 +473,17 @@ function partialLimited(ip) {
 const { LABELS } = require('./src/validate');
 const leadIdOk = id => /^[0-9a-f-]{36}$/i.test(id);
 app.post('/api/lead/:id/status', express.json({ limit: '2kb' }), async (req, res) => {
-  const id = String(req.params.id), cs = String((req.body || {}).claim_status || '');
+  const id = String(req.params.id), body = req.body || {};
+  const cs = String(body.claim_status || '');
+  const addr = typeof body.address === 'string' ? body.address.trim().slice(0, 200) : '';
   if (!leadIdOk(id) || !LABELS.claim_status[cs]) return res.status(400).json({ ok: false });
   if (partialLimited(clientIp(req))) return res.status(429).json({ ok: false });
   try {
-    const row = await db.setClaimStatus(id, cs);
+    const row = await db.setClaimStatus(id, cs, addr);
     if (!row) return res.status(404).json({ ok: false });
     res.json({ ok: true });
-    hubspot.setClaimStatus(row.phone, cs).then(s => console.log('[hubspot] claim status', id, s)).catch(e => console.error('[hubspot] claim status', e.message));
+    hubspot.setClaimStatus(row.phone, cs, row.address).then(s => console.log('[hubspot] claim status', id, s)).catch(e => console.error('[hubspot] claim status', e.message));
+    if (pendingEmails.has(id)) flushLeadEmail(id, row);
   } catch (e) { console.error('[status]', e.message); res.status(500).json({ ok: false }); }
 });
 

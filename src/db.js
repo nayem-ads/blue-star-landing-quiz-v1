@@ -43,6 +43,8 @@ ALTER TABLE leads ALTER COLUMN loss_timing DROP NOT NULL;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS owner TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS capi_status TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS hubspot_status TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS fbp TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS fbc TEXT;
 CREATE TABLE IF NOT EXISTS partial_leads (
   pid TEXT PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -70,7 +72,7 @@ CREATE INDEX IF NOT EXISTS lead_files_lead_idx ON lead_files (public_id);
 
 const COLS = ['public_id','loss_type','claim_status','loss_timing','name','phone','zip','page_variant',
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid',
-  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam','source','email','notes','address','owner'];
+  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam','source','email','notes','address','owner','fbp','fbc'];
 
 async function init() {
   if (!process.env.DATABASE_URL) {
@@ -137,7 +139,9 @@ async function setEmailStatus(publicId, status, error) {
 async function claimFailedEmails() {
   if (!pool) return [];
   const r = await pool.query(`UPDATE leads SET email_status='retrying' WHERE id IN (
-    SELECT id FROM leads WHERE is_spam=false AND email_status='failed' AND name !~* '^test(\\y|\\s|$)' AND created_at > now() - interval '48 hours' ORDER BY created_at LIMIT 10
+    SELECT id FROM leads WHERE is_spam=false AND (
+      email_status='failed' OR (email_status='pending' AND created_at < now() - interval '2 minutes')
+    ) AND name !~* '^\\[?test(\\y|\\s|\\]|$)' AND created_at > now() - interval '48 hours' ORDER BY created_at LIMIT 10
   ) RETURNING *`);
   return r.rows;
 }
@@ -152,14 +156,19 @@ async function setCallback(publicId, slot) {
   return r.rows[0] || null;
 }
 
-// Page B step 3: claim status arrives after the lead is saved.
-async function setClaimStatus(publicId, claimStatus) {
+// Page B step 3: claim status (and optional full street address) arrives after the lead is saved.
+async function setClaimStatus(publicId, claimStatus, address) {
+  const cleanAddr = typeof address === 'string' ? address.trim().slice(0, 200) : '';
   if (!pool) {
     const row = fileLead(publicId); if (!row) return null;
-    fs.appendFileSync(FILE, JSON.stringify({ claim_status_for: publicId, claim_status: claimStatus, at: new Date().toISOString() }) + '\n');
-    return { ...row, claim_status: claimStatus };
+    const nextAddr = cleanAddr.length >= 4 ? cleanAddr : row.address;
+    fs.appendFileSync(FILE, JSON.stringify({ claim_status_for: publicId, claim_status: claimStatus, address: nextAddr, at: new Date().toISOString() }) + '\n');
+    return { ...row, claim_status: claimStatus, address: nextAddr };
   }
-  const r = await pool.query('UPDATE leads SET claim_status=$2 WHERE public_id=$1 RETURNING *', [publicId, claimStatus]);
+  const r = await pool.query(
+    "UPDATE leads SET claim_status=$2, address=CASE WHEN length($3) >= 4 THEN $3 ELSE address END WHERE public_id=$1 RETURNING *",
+    [publicId, claimStatus, cleanAddr]
+  );
   return r.rows[0] || null;
 }
 

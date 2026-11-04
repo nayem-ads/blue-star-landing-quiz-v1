@@ -129,12 +129,20 @@ async function addCallback(publicId, slot) {
   await hs(`/crm/v3/objects/deals/${encodeURIComponent(publicId)}?idProperty=bs_lead_id`, { method: 'PATCH', body: JSON.stringify({ properties: { bs_callback_slot: slot } }) });
 }
 
-// Page B step 3: claim status lands after the contact exists. Contact is matched on phone digits.
-async function setClaimStatus(phone, claimStatus) {
+// Page B step 3: claim status (and optional street address) lands after the contact exists. Contact is matched on phone digits.
+async function setClaimStatus(phone, claimStatus, address) {
   if (!(process.env.HUBSPOT_TOKEN || '').trim()) return 'skipped: no HUBSPOT_TOKEN';
   const digits = String(phone || '').replace(/\D/g, '');
   if (digits.length !== 10) return 'skipped: no phone';
-  await hs(`/crm/v3/objects/contacts/${digits}?idProperty=bs_phone_digits`, { method: 'PATCH', body: JSON.stringify({ properties: { bs_claim_status: claimStatus } }) });
+  const properties = { bs_claim_status: claimStatus };
+  const cleanAddr = typeof address === 'string' ? address.trim().slice(0, 200) : '';
+  if (cleanAddr.length >= 4 && !/^ZIP\s+\d{5}$/i.test(cleanAddr)) {
+    const segs = cleanAddr.split(',').map(s => s.trim()).filter(Boolean);
+    properties.bs_property_address = cleanAddr;
+    if (segs[0]) properties.address = segs[0];
+    if (segs.length >= 3 && segs[1]) properties.city = segs[1];
+  }
+  await hs(`/crm/v3/objects/contacts/${digits}?idProperty=bs_phone_digits`, { method: 'PATCH', body: JSON.stringify({ properties }) });
   return 'updated';
 }
 

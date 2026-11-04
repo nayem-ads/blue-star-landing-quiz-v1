@@ -40,20 +40,24 @@ function validateLead(b) {
   if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) errors.phone = 'Please enter a 10 digit US mobile number.';
   out.phone = digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : digits;
 
-  // Property address is required on both forms, but never block a lead if they omit the street number or type city/ZIP only.
-  const address = clip(b.address, 200).replace(/\s+/g, ' ');
-  if (address.length < 2 || !/[a-zA-Z0-9]/.test(address)) errors.address = 'Please enter the property address.';
-  out.address = address || null;
+  // Property ZIP (5 digits) or address is required; never block a homeowner who enters their 5-digit ZIP on Step 1.
   let zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
-  if (zip.length !== 5) {
-    if (/^\d{5}(?:-\d{4})?$/.test(out.address || '')) {
-      zip = out.address.slice(0, 5);
+  const rawAddr = clip(b.address, 200).replace(/\s+/g, ' ');
+  if (zip.length !== 5 && rawAddr) {
+    if (/^\d{5}(?:-\d{4})?$/.test(rawAddr)) {
+      zip = rawAddr.slice(0, 5);
     } else {
-      const tail = (out.address || '').replace(/^\s*\d+[a-zA-Z]?\b/, '');
+      const tail = rawAddr.replace(/^\s*\d+[a-zA-Z]?\b/, '');
       const m = tail.match(/\b(\d{5})\b/g);
       zip = m ? m[m.length - 1] : '';
     }
   }
+  const address = rawAddr || (zip.length === 5 ? `ZIP ${zip}` : '');
+  if (address.length < 2 || !/[a-zA-Z0-9]/.test(address)) {
+    if (pageB && !rawAddr) errors.zip = 'Please enter the 5-digit property ZIP code.';
+    else errors.address = 'Please enter the property address or 5-digit ZIP.';
+  }
+  out.address = address || null;
   out.zip = zip || null;
 
   for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'page_variant']) out[k] = clip(b[k], 300) || null;

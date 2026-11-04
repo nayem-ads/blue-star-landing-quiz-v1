@@ -10,16 +10,17 @@
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   function $(id) { return d.getElementById(id); }
 
-  // Same events as Page A, tagged page_variant b. Lead fires once, after the server saves the lead (eventID = lead id).
+  var PVAR = body.dataset.variant || 'b';
+  // Same events as Page A, tagged page_variant. Lead fires once, after the server saves the lead (eventID = lead id).
   function dl(ev, extra) {
     extra = extra || {};
-    w.dataLayer = w.dataLayer || []; var o = { event: ev, page_variant: 'b' }; for (var k in extra) o[k] = extra[k]; w.dataLayer.push(o);
+    w.dataLayer = w.dataLayer || []; var o = { event: ev, page_variant: PVAR }; for (var k in extra) o[k] = extra[k]; w.dataLayer.push(o);
     if (typeof w.fbq !== 'function') return;
-    if (ev === 'generate_lead') w.fbq('track', 'Lead', { content_name: extra.loss_type, content_category: extra.claim_status, form: 'form', page_variant: 'b' }, { eventID: extra.lead_id });
-    else if (ev === 'call_click') w.fbq('track', 'Contact', { content_name: extra.location, page_variant: 'b' });
-    else if (ev === 'callback_booked') w.fbq('track', 'Schedule', { content_name: extra.slot, page_variant: 'b' });
-    else if (ev === 'quiz_start') w.fbq('trackCustom', 'QuizStart', { page_variant: 'b' });
-    else if (ev === 'quiz_answer') w.fbq('trackCustom', 'QuizAnswer', { step: extra.step, answer: extra.answer, page_variant: 'b' });
+    if (ev === 'generate_lead') w.fbq('track', 'Lead', { content_name: extra.loss_type, content_category: extra.claim_status, form: 'form', page_variant: PVAR }, { eventID: extra.lead_id });
+    else if (ev === 'call_click') w.fbq('track', 'Contact', { content_name: extra.location, page_variant: PVAR });
+    else if (ev === 'callback_booked') w.fbq('track', 'Schedule', { content_name: extra.slot, page_variant: PVAR });
+    else if (ev === 'quiz_start') w.fbq('trackCustom', 'QuizStart', { page_variant: PVAR });
+    else if (ev === 'quiz_answer') w.fbq('trackCustom', 'QuizAnswer', { step: extra.step, answer: extra.answer, page_variant: PVAR });
   }
   function ck(n) { try { var m = d.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; } catch (e) { return ''; } }
   function digitsOf(v) { var x = String(v || '').replace(/\D/g, ''); if (x.length === 11 && x[0] === '1') x = x.slice(1); return x; }
@@ -159,23 +160,52 @@
 
   // ---------- step 1 ----------
   var markBad = function () {};
-  var f1 = $('f1'), sel = $('f-loss'), fname = $('f-name'), fphone = $('f-phone'), faddr = $('f-address');
+  var f1 = $('f1'), sel = $('f-loss'), fname = $('f-name'), fphone = $('f-phone'), fzip = $('f-zip'), faddr = $('f-address');
   function fmtPhone(x) { return x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x; }
+  function pushPartial(extra) {
+    var pDigits = fphone ? digitsOf(fphone.value) : '';
+    if (pDigits.length !== 10 || /^[01]/.test(pDigits) || /^(\d)\1{9}$/.test(pDigits)) return;
+    var p = {
+      pid: state.pid, form: 'form',
+      name: fname ? fname.value.trim().replace(/\s+/g, ' ') : (state.name || ''),
+      phone: fmtPhone(pDigits),
+      zip: fzip ? String(fzip.value || '').replace(/\D/g, '').slice(0, 5) : (state.zip || ''),
+      address: faddr && faddr.value ? faddr.value.trim() : (state.address || ''),
+      loss_type: sel ? sel.value : (state.loss_type || ''),
+      company: f1 && f1.company ? f1.company.value : '',
+      page_variant: PVAR, landing_url: state.landing_url, referrer: state.referrer
+    };
+    if (extra) for (var ek in extra) p[ek] = extra[ek];
+    for (var t in state.track) p[t] = state.track[t];
+    fetch('/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(p), keepalive: true }).catch(function () {});
+  }
   if (f1) {
-    if (state.loss_type) sel.value = state.loss_type === 'hail' ? 'storm' : state.loss_type;
-    else if (qs.get('loss') === 'hail' || /az|hail|120248791830950534/i.test((qs.get('utm_campaign') || '') + ' ' + (qs.get('hsa_cam') || ''))) sel.value = 'storm';
-    else if (LOSS[qs.get('loss')]) sel.value = qs.get('loss'); // ?loss= from the ad pre-selects what happened
-    ['name', 'phone', 'address'].forEach(function (k) { if (state[k] && !f1[k].value) f1[k].value = state[k]; });
-    if (state.zip) f1.zip.value = state.zip;
+    if (state.loss_type && LOSS[state.loss_type]) sel.value = state.loss_type;
+    else if (LOSS[qs.get('loss')]) sel.value = qs.get('loss');
+    else if (/az|hail|120248791830950534/i.test((qs.get('utm_campaign') || '') + ' ' + (qs.get('hsa_cam') || ''))) sel.value = 'hail';
+    if (state.name && !fname.value) fname.value = state.name;
+    if (state.phone && !fphone.value) fphone.value = state.phone;
+    if (state.zip && fzip && !fzip.value) fzip.value = state.zip;
+    if (state.address && faddr && !faddr.value && !/^ZIP\s+\d{5}$/i.test(state.address)) faddr.value = state.address;
     var started = function () { if (!state.t0) { state.t0 = Date.now(); save(); dl('quiz_start'); } };
     f1.addEventListener('focusin', started);
-    fphone.addEventListener('input', function () { var x = digitsOf(fphone.value).slice(0, 10); fphone.value = fmtPhone(x); });
-    var bad = function (k, on) { var f = f1.querySelector('.fld[data-f="' + k + '"]'); if (f) f.classList.toggle('bad', !!on); (k === 'loss_type' ? sel : f1[k]).setAttribute('aria-invalid', on ? 'true' : 'false'); };
+    var pTimer = null;
+    fphone.addEventListener('input', function () {
+      var x = digitsOf(fphone.value).slice(0, 10);
+      fphone.value = fmtPhone(x);
+      clearTimeout(pTimer);
+      if (x.length === 10) pTimer = setTimeout(function () { pushPartial(); }, 1200);
+    });
+    if (fzip) fzip.addEventListener('input', function () { fzip.value = String(fzip.value || '').replace(/\D/g, '').slice(0, 5); });
+    var fieldEl = function (k) { return k === 'loss_type' ? sel : k === 'zip' ? fzip : f1[k]; };
+    var bad = function (k, on) { var f = f1.querySelector('.fld[data-f="' + k + '"]'); var el = fieldEl(k); if (f) f.classList.toggle('bad', !!on); if (el) el.setAttribute('aria-invalid', on ? 'true' : 'false'); };
     var okOf = function (k) {
-      var v = (k === 'loss_type' ? sel.value : f1[k].value || '').trim();
+      var el = fieldEl(k);
+      var v = (el ? el.value : '').trim();
       if (k === 'loss_type') return !!LOSS[v];
       if (k === 'name') return v.length >= 2 && /[a-z]/i.test(v);
       if (k === 'phone') { var p = digitsOf(v); return p.length === 10 && !/^[01]/.test(p) && !/^(\d)\1{9}$/.test(p); }
+      if (k === 'zip') return /^\d{5}$/.test(v);
       return v.length >= 2 && /[a-z0-9]/i.test(v);
     };
     var sum = $('sum'), sumT = $('sum-t');
@@ -183,29 +213,30 @@
       var n = f1.querySelectorAll('.fld.bad').length;
       sum.hidden = !n; sumT.textContent = n === 1 ? 'Almost there. Please fix the highlighted item.' : 'Almost there. Please fix the ' + n + ' highlighted items.';
     };
-    ['name', 'phone', 'address'].forEach(function (k) {
-      f1[k].addEventListener('input', function () { bad(k, false); if (!sum.hidden) refreshSum(); });
-      f1[k].addEventListener('blur', function () { if (f1[k].value) { bad(k, !okOf(k)); if (!sum.hidden) refreshSum(); } });
+    ['name', 'phone', 'zip'].forEach(function (k) {
+      var el = fieldEl(k); if (!el) return;
+      el.addEventListener('input', function () { bad(k, false); if (!sum.hidden) refreshSum(); });
+      el.addEventListener('blur', function () { if (el.value) { bad(k, !okOf(k)); if (!sum.hidden) refreshSum(); } if (k === 'phone') pushPartial(); });
     });
     sel.addEventListener('change', function () { started(); bad('loss_type', false); if (!sum.hidden) refreshSum(); });
     f1.addEventListener('submit', function (e) {
       e.preventDefault(); started();
-      var keys = ['loss_type', 'name', 'phone', 'address'], first = null;
+      var keys = ['loss_type', 'name', 'phone', 'zip'], first = null;
       keys.forEach(function (k) { var ok = okOf(k); bad(k, !ok); if (!ok && !first) first = k; });
       refreshSum();
-      if (first) { (first === 'loss_type' ? sel : f1[first]).focus(); return; }
-      state.loss_type = sel.value; state.name = fname.value.trim().replace(/\s+/g, ' '); state.phone = fphone.value; state.address = faddr.value.trim(); state.zip = f1.zip.value;
+      if (first) { var fel = fieldEl(first); if (fel) fel.focus(); return; }
+      state.loss_type = sel.value; state.name = fname.value.trim().replace(/\s+/g, ' '); state.phone = fphone.value; state.zip = fzip.value.trim();
+      if (!state.address || /^ZIP\s+\d{5}$/i.test(state.address)) state.address = 'ZIP ' + state.zip;
       state.step1 = true; save();
       dl('quiz_answer', { step: 1, answer: state.loss_type });
       // Unfinished form only. The team is alerted if they stop here; it closes when the lead saves or they say they rent.
-      var p = { pid: state.pid, form: 'form', name: state.name, phone: state.phone, address: state.address, zip: state.zip, loss_type: state.loss_type, company: f1.company.value, page_variant: 'b', landing_url: state.landing_url, referrer: state.referrer };
-      for (var t in state.track) p[t] = state.track[t];
-      fetch('/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(p), keepalive: true }).catch(function () {});
+      clearTimeout(pTimer);
+      pushPartial();
       show('2', true);
     });
-    markBad = function (errs) { Object.keys(errs).forEach(function (k) { bad(k, true); }); refreshSum(); };
-    acInit(faddr, function () { bad('address', !okOf('address')); });
+    markBad = function (errs) { Object.keys(errs).forEach(function (k) { bad(k === 'address' ? 'zip' : k, true); }); refreshSum(); };
   }
+  if (faddr) acInit(faddr, function () { if (faddr.value) { state.address = faddr.value.trim(); save(); } });
 
   // ---------- step 2: ownership. Owner = save the lead. Renter = exit, no lead, no alert ----------
   var busy = false, err2 = $('err2');
@@ -223,15 +254,18 @@
       saveLead(o);
     } else if (k === 'claim_status') {
       dl('quiz_answer', { step: 3, answer: v });
-      if (state.lead_id) fetch('/api/lead/' + encodeURIComponent(state.lead_id) + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claim_status: v }), keepalive: true }).catch(function () {});
+      var streetAddr = faddr && faddr.value ? faddr.value.trim() : '';
+      if (streetAddr) { state.address = streetAddr; save(); }
+      if (state.lead_id) fetch('/api/lead/' + encodeURIComponent(state.lead_id) + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claim_status: v, address: streetAddr }), keepalive: true }).catch(function () {});
       setTimeout(function () { show('4', true); }, 160);
     }
   });
   function saveLead(btn) {
     busy = true; err2.hidden = true; btn.setAttribute('aria-busy', 'true');
     var payload = {
-      source: 'form', loss_type: state.loss_type, owner: state.owner, name: state.name, phone: state.phone, address: state.address, zip: state.zip,
-      company: f1 ? f1.company.value : '', elapsed_ms: state.t0 ? Date.now() - state.t0 : null, page_variant: 'b', landing_url: state.landing_url, referrer: state.referrer
+      source: 'form', loss_type: state.loss_type, owner: state.owner, name: state.name, phone: state.phone,
+      address: state.address || ('ZIP ' + (state.zip || '')), zip: state.zip,
+      company: f1 ? f1.company.value : '', elapsed_ms: state.t0 ? Date.now() - state.t0 : null, page_variant: PVAR, landing_url: state.landing_url, referrer: state.referrer
     };
     for (var t in state.track) payload[t] = state.track[t];
     payload.fbp = ck('_fbp'); payload.fbc = ck('_fbc');
@@ -241,7 +275,7 @@
         state.fired = state.fired || {};
         if (!state.fired[j.id]) { state.fired[j.id] = 1; save(); dl('generate_lead', { lead_id: j.id, loss_type: state.loss_type, claim_status: '', form: 'form' }); }
         save(); show('3', true);
-      } else if (j.errors && (j.errors.loss_type || j.errors.name || j.errors.phone || j.errors.address)) {
+      } else if (j.errors && (j.errors.loss_type || j.errors.name || j.errors.phone || j.errors.zip || j.errors.address)) {
         show('1', true); markBad(j.errors);
       } else { throw new Error(j.error || 'save'); }
     }).catch(function (e) {
