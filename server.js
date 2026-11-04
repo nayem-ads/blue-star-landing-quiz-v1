@@ -221,14 +221,15 @@ function page(req, robots, st) {
 // ---------- Page B (1-screen direct homeowner claim check) — now default for all paid traffic unless ?lp=quiz ----------
 const B_V = require('crypto').createHash('sha1').update(fs.readFileSync(path.join(PUB, 'b.js'))).digest('hex').slice(0, 10);
 const TEMPLATE_B = fs.readFileSync(path.join(__dirname, 'views', 'page-b.html'), 'utf8').replace('src="/b.js"', `src="/b.js?v=${B_V}"`);
-const rawSplit = String(process.env.LP_SPLIT_B ?? '').replace('%', '').trim().toLowerCase();
+const rawSplit = String(process.env.LP_DIRECT_SPLIT ?? '').replace('%', '').trim().toLowerCase();
 const SPLIT_B = rawSplit === 'off' ? 0 : (rawSplit !== '' && Number.isFinite(Number(rawSplit)) ? Math.max(0, Math.min(100, Number(rawSplit))) : 100);
 const lpCookie = req => (/(?:^|;\s*)bs_lp=([ab])\b/.exec(req.get('cookie') || '') || [])[1];
 function pickVariant(req, res) {
   const forced = String(req.query.lp || '').toLowerCase();
   let v;
   if (forced === 'quiz') v = 'a';
-  else if (forced === 'b' || forced === 'a') v = SPLIT_B === 0 ? 'a' : 'b';
+  else if (forced === 'b') v = 'b';
+  else if (forced === 'a') v = SPLIT_B === 0 ? 'a' : 'b';
   else v = Math.random() * 100 < SPLIT_B ? 'b' : 'a';
   if (lpCookie(req) !== v) res.append('Set-Cookie', `bs_lp=${v}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
   return v;
