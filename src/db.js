@@ -137,7 +137,7 @@ async function setEmailStatus(publicId, status, error) {
 async function claimFailedEmails() {
   if (!pool) return [];
   const r = await pool.query(`UPDATE leads SET email_status='retrying' WHERE id IN (
-    SELECT id FROM leads WHERE is_spam=false AND email_status='failed' AND created_at > now() - interval '48 hours' ORDER BY created_at LIMIT 10
+    SELECT id FROM leads WHERE is_spam=false AND email_status='failed' AND name !~* '^test(\\y|\\s|$)' AND created_at > now() - interval '48 hours' ORDER BY created_at LIMIT 10
   ) RETURNING *`);
   return r.rows;
 }

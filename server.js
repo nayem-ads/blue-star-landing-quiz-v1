@@ -544,18 +544,10 @@ async function sweepPartials() {
 }
 setInterval(sweepPartials, Number(process.env.PARTIAL_SWEEP_MS) || 60000).unref();
 
-const ADMIN_READ_SHA256 = 'c0e3a59613b0c9fb6941e70cb9df70c106a8489bdca21f328db85e1cf9b745d6';
-function isAdminRead(req) {
-  const qk = String(req.query.key || '');
-  if (!qk) return false;
-  if (process.env.ADMIN_KEY && qk === process.env.ADMIN_KEY) return true;
-  const h = require('crypto').createHash('sha256').update(qk).digest();
-  return require('crypto').timingSafeEqual(h, Buffer.from(ADMIN_READ_SHA256, 'hex'));
-}
-
 // CSV of unfinished forms: /admin/partials.csv?key=YOUR_ADMIN_KEY
 app.get('/admin/partials.csv', async (req, res) => {
-  if (!isAdminRead(req)) return res.status(404).send('Not found');
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) return res.status(404).send('Not found');
   const rows = await db.listPartials();
   if (req.query.format === 'json') return res.set({ 'Cache-Control': 'no-store' }).json({ ok: true, count: rows.length, rows });
   const cols = ['updated_at', 'status', 'form', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'utm_source', 'utm_medium', 'utm_campaign', 'gclid', 'fbclid', 'landing_url', 'pid'];
@@ -566,7 +558,8 @@ app.get('/admin/partials.csv', async (req, res) => {
 
 // ---------- CSV export: /admin/leads.csv?key=YOUR_ADMIN_KEY ----------
 app.get('/admin/leads.csv', async (req, res) => {
-  if (!isAdminRead(req)) return res.status(404).send('Not found');
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) return res.status(404).send('Not found');
   const rows = await db.listLeads();
   if (req.query.format === 'json') return res.set({ 'Cache-Control': 'no-store' }).json({ ok: true, count: rows.length, rows });
   const cols = ['created_at', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'capi_status', 'hubspot_status', 'is_spam', 'public_id'];
@@ -593,7 +586,27 @@ app.get('/admin/test-email', async (req, res) => {
   const key = process.env.ADMIN_KEY;
   if (!key || req.query.key !== key) return res.status(404).send('Not found');
   try {
-    const status = await notifyLead({ public_id: 'test', name: 'Test Lead', phone: '(916) 555-0100', zip: '95811', loss_type: 'fire', claim_status: 'low_offer', loss_timing: 'm1_6', page_variant: 'default', utm_source: 'test', created_at: new Date() });
+    const status = await notifyLead({
+      public_id: 'test-resend-verification',
+      name: '[TEST — DO NOT CALL] Sample Homeowner',
+      phone: '(949) 555-0148',
+      email: 'nayem.adsmanager@gmail.com',
+      address: '28000 Calle Real, San Clemente, CA 92672',
+      zip: '92672',
+      owner: 'own_home',
+      loss_type: 'smoke',
+      claim_status: 'low_offer',
+      loss_timing: 'm1_6',
+      source: 'quiz',
+      page_variant: 'smoke-filter',
+      utm_source: 'meta',
+      utm_medium: 'paid',
+      utm_campaign: 'bsa_ca_southoc_nov26',
+      utm_content: 'a4_01_filter',
+      notes: 'System verification email confirming lead@bluestaradjusters.com routing via Resend (To: Mike, CC: Nayem). No action needed.',
+      landing_url: 'https://quiz.bluestaradjusters.com/?lp=a&state=ca&area=oc&loss=smoke&h=smoke-filter&utm_source=meta&utm_medium=paid&utm_campaign=bsa_ca_southoc_nov26&utm_content=a4_01_filter&hsa_cam=120248797849940534&hsa_grp=120248797983080534&hsa_ad=120248798255950534&fbclid=test_verification',
+      created_at: new Date(),
+    });
     const [to, ...cc] = TO();
     res.json({ ok: true, status, to, cc });
   } catch (e) { res.status(502).json({ ok: false, error: e.message }); }
