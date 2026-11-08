@@ -100,7 +100,7 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   // ---------- Page B (1-screen qualified homeowner claim check) ----------
   const ck = c => ({ Cookie: c });
   t = await (await fetch(BASE + '/')).text();
-  ok(t.includes('Step 1 of 3') && t.includes('name="owner"') && !t.includes('id="s2"') && t.includes('data-variant="b"') && /src="\/b\.js\?v=[0-9a-f]{10}"/.test(t), 'default / serves Page B with Screen 1 ownership pills');
+  ok(t.includes('Step 1 of 3') && t.includes('name="owner"') && t.includes('id="f-address"') && !t.includes('Property street address (optional)') && !t.includes('id="s2"') && t.includes('data-variant="b"') && /src="\/b\.js\?v=[0-9a-f]{10}"/.test(t), 'default / serves Page B with Screen 1 required street address + ownership pills');
   t = await (await fetch(BASE + '/?lp=quiz', { headers: ck('bs_lp=b') })).text();
   ok(t.includes('id="quiz"') && !t.includes('Step 1 of 3'), '?lp=quiz serves Page A');
   r = await fetch(BASE + '/?lp=b', { headers: ck('bs_lp=a') });
@@ -108,10 +108,12 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   t = await (await fetch(BASE + '/?lp=b&state=az&h=pa-hail')).text();
   ok(t.includes('3004469742') && t.includes('Hail or roof claim denied or underpaid?'), 'Google Search AZ ?h=pa-hail variant renders');
   t = await (await fetch(BASE + '/thank-you', { headers: ck('bs_lp=b') })).text(); ok(t.includes('id="confirm"') && t.includes('data-ty="ty"') && t.includes('noindex,nofollow'), 'thank-you on cookie b is Page B calendar');
-  const goodB = { source: 'form', loss_type: 'water', owner: 'own_home', name: 'Test Page Bee', phone: '(916) 555-0141', zip: '95811', address: 'ZIP 95811', elapsed_ms: 25000, page_variant: 'b', utm_source: 'facebook', fbclid: 'FBTEST', fbp: 'fb.1.1700000000000.123', landing_url: 'https://quiz.bluestaradjusters.com/?utm_source=facebook' };
+  const goodB = { source: 'form', loss_type: 'water', owner: 'own_home', name: 'Test Page Bee', phone: '(916) 555-0141', zip: '95811', address: '1610 R St, Sacramento, CA 95811', elapsed_ms: 25000, page_variant: 'b', utm_source: 'facebook', fbclid: 'FBTEST', fbp: 'fb.1.1700000000000.123', landing_url: 'https://quiz.bluestaradjusters.com/?utm_source=facebook' };
   r = await post('/api/lead', { ...goodB, owner: 'rent', phone: '(916) 555-0142' }, { 'X-Real-IP': '10.0.5.1' }); j = await r.json(); ok(r.status === 400 && j.errors.owner, 'Page B renter refused, no lead');
+  r = await post('/api/lead', { ...goodB, address: '', phone: '(916) 555-0144' }, { 'X-Real-IP': '10.0.5.1' }); j = await r.json(); ok(r.status === 400 && j.errors.address, 'Page B missing street address rejected (address is must)');
+  r = await post('/api/lead', { ...goodB, address: 'ZIP 95811', phone: '(916) 555-0145' }, { 'X-Real-IP': '10.0.5.1' }); j = await r.json(); ok(r.status === 400 && j.errors.address, 'Page B ZIP-only placeholder address rejected');
   r = await post('/api/lead', { ...goodB, loss_type: '' }, { 'X-Real-IP': '10.0.5.1' }); j = await r.json(); ok(r.status === 400 && j.errors.loss_type === 'Please choose what happened.', 'Page B missing loss type message');
-  r = await post('/api/lead', goodB, { 'X-Real-IP': '10.0.5.2' }); j = await r.json(); ok(r.ok && j.ok && /^[0-9a-f-]{36}$/.test(j.id), 'Page B lead saves directly on Screen 1 with 5-digit ZIP + owner');
+  r = await post('/api/lead', goodB, { 'X-Real-IP': '10.0.5.2' }); j = await r.json(); ok(r.ok && j.ok && /^[0-9a-f-]{36}$/.test(j.id), 'Page B lead saves directly on Screen 1 with required street address + 5-digit ZIP + owner');
   const bid = j.id;
   r = await post(`/api/lead/${bid}/status`, { claim_status: 'low_offer', address: '1610 R St, Sacramento, CA 95811' }, { 'X-Real-IP': '10.0.5.2' }); ok(r.ok, 'step 2 of 3 claim status + optional street address saved on the lead');
   r = await post(`/api/lead/${bid}/status`, { claim_status: 'nope' }, { 'X-Real-IP': '10.0.5.2' }); ok(r.status === 400, 'bad claim status rejected');

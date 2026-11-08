@@ -40,25 +40,23 @@ function validateLead(b) {
   if (digits.length !== 10 || /^[01]/.test(digits) || /^(\d)\1{9}$/.test(digits)) errors.phone = 'Please enter a 10 digit US mobile number.';
   out.phone = digits.length === 10 ? `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}` : digits;
 
-  // Property ZIP (5 digits) or address is required; never block a homeowner who enters their 5-digit ZIP on Step 1.
+  // Damaged property street address is required on every lead ("address is must").
   let zip = String(b.zip || '').replace(/\D/g, '').slice(0, 5);
   const rawAddr = clip(b.address, 200).replace(/\s+/g, ' ');
-  if (zip.length !== 5 && rawAddr) {
-    if (/^\d{5}(?:-\d{4})?$/.test(rawAddr)) {
-      zip = rawAddr.slice(0, 5);
-    } else {
-      const tail = rawAddr.replace(/^\s*\d+[a-zA-Z]?\b/, '');
-      const m = tail.match(/\b(\d{5})\b/g);
-      zip = m ? m[m.length - 1] : '';
-    }
+  if (zip.length !== 5 && rawAddr && !/^\d{5}(?:-\d{4})?$/.test(rawAddr)) {
+    const tail = rawAddr.replace(/^\s*\d+[a-zA-Z]?\b/, '');
+    const m = tail.match(/\b(\d{5})\b/g);
+    zip = m ? m[m.length - 1] : '';
   }
-  const address = rawAddr || (zip.length === 5 ? `ZIP ${zip}` : '');
-  if (address.length < 2 || !/[a-zA-Z0-9]/.test(address)) {
-    if (pageB && !rawAddr) errors.zip = 'Please enter the 5-digit property ZIP code.';
-    else errors.address = 'Please enter the property address or 5-digit ZIP.';
+  const hasStreetAddr = rawAddr.length >= 4 && /[a-zA-Z]/.test(rawAddr) && !/^ZIP\s+\d{5}$/i.test(rawAddr);
+  if (!hasStreetAddr) {
+    errors.address = 'Please enter the damaged property street address.';
   }
-  out.address = address || null;
-  out.zip = zip || null;
+  if (pageB && zip.length !== 5) {
+    errors.zip = 'Please enter the 5-digit property ZIP code.';
+  }
+  out.address = hasStreetAddr ? rawAddr : null;
+  out.zip = zip.length === 5 ? zip : null;
 
   for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'page_variant']) out[k] = clip(b[k], 300) || null;
   out.landing_url = clip(b.landing_url, 1000) || null;

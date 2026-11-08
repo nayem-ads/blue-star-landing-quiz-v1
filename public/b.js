@@ -119,9 +119,10 @@
     }
     function pick(i) {
       var it = items[i]; if (!it) return;
-      input.value = it.full; if (zipEl) zipEl.value = it.zip;
+      input.value = it.full;
+      if (zipEl && it.zip) { zipEl.value = it.zip; try { zipEl.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {} }
       items = []; close(); if (onPick) onPick();
-      try { input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+      try { input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
     }
     function search(q) {
       if (ctl) try { ctl.abort(); } catch (e) {}
@@ -144,7 +145,6 @@
         .catch(function () {});
     }
     input.addEventListener('input', function () {
-      if (zipEl) zipEl.value = '';
       var q = input.value.trim(); clearTimeout(timer);
       if (q.length < 3) { seq++; items = []; return close(); }
       timer = setTimeout(function () { search(q); }, 250);
@@ -207,7 +207,14 @@
       if (x.length === 10) pTimer = setTimeout(function () { pushPartial(); }, 1200);
     });
     if (fzip) fzip.addEventListener('input', function () { fzip.value = String(fzip.value || '').replace(/\D/g, '').slice(0, 5); });
-    var fieldEl = function (k) { return k === 'loss_type' ? sel : k === 'owner' ? ownRadios[0] : k === 'zip' ? fzip : f1[k]; };
+    var extractZipFromAddr = function (s) {
+      var raw = String(s || '').trim();
+      if (/^\d{5}(?:-\d{4})?$/.test(raw)) return '';
+      var tail = raw.replace(/^\s*\d+[a-z]?\b/i, '');
+      var m = tail.match(/\b(\d{5})\b/g);
+      return m ? m[m.length - 1] : '';
+    };
+    var fieldEl = function (k) { return k === 'loss_type' ? sel : k === 'owner' ? ownRadios[0] : k === 'address' ? faddr : k === 'zip' ? fzip : f1[k]; };
     var bad = function (k, on) {
       var f = f1.querySelector('.fld[data-f="' + k + '"]');
       if (f) f.classList.toggle('bad', !!on);
@@ -219,6 +226,7 @@
       var el = fieldEl(k);
       var v = (el ? el.value : '').trim();
       if (k === 'loss_type') return !!LOSS[v];
+      if (k === 'address') return v.length >= 4 && /[a-z]/i.test(v) && !/^ZIP\s+\d{5}$/i.test(v);
       if (k === 'name') return v.length >= 2 && /[a-z]/i.test(v);
       if (k === 'phone') { var p = digitsOf(v); return p.length === 10 && !/^[01]/.test(p) && !/^(\d)\1{9}$/.test(p); }
       if (k === 'zip') return /^\d{5}$/.test(v);
@@ -228,10 +236,20 @@
       var n = f1.querySelectorAll('.fld.bad').length;
       sum.hidden = !n; sumT.textContent = n === 1 ? 'Almost there. Please fix the highlighted item.' : 'Almost there. Please fix the ' + n + ' highlighted items.';
     };
-    ['name', 'phone', 'zip'].forEach(function (k) {
+    ['address', 'zip', 'name', 'phone'].forEach(function (k) {
       var el = fieldEl(k); if (!el) return;
       el.addEventListener('input', function () { bad(k, false); if (!sum.hidden) refreshSum(); });
-      el.addEventListener('blur', function () { if (el.value) { bad(k, !okOf(k)); if (!sum.hidden) refreshSum(); } if (k === 'phone') pushPartial(); });
+      el.addEventListener('blur', function () {
+        var check = function () {
+          if (k === 'address' && faddr && fzip && !/^\d{5}$/.test(fzip.value)) {
+            var ez = extractZipFromAddr(faddr.value);
+            if (ez) { fzip.value = ez; bad('zip', false); }
+          }
+          if (el.value) { bad(k, !okOf(k)); if (!sum.hidden) refreshSum(); }
+          if (k === 'phone' || k === 'address') pushPartial();
+        };
+        if (k === 'address') setTimeout(check, 180); else check();
+      });
     });
     sel.addEventListener('change', function () { started(); bad('loss_type', false); if (!sum.hidden) refreshSum(); });
     ownRadios.forEach(function (r) {
@@ -249,12 +267,19 @@
     });
     f1.addEventListener('submit', function (e) {
       e.preventDefault(); if (busy) return; started();
-      var keys = ['loss_type', 'owner', 'name', 'phone', 'zip'], first = null;
+      if (faddr && fzip && !/^\d{5}$/.test(fzip.value)) {
+        var ez = extractZipFromAddr(faddr.value);
+        if (ez) fzip.value = ez;
+      }
+      var keys = ['loss_type', 'owner', 'address', 'zip', 'name', 'phone'], first = null;
       keys.forEach(function (k) { var ok = okOf(k); bad(k, !ok); if (!ok && !first) first = k; });
       refreshSum();
       if (first) { var fel = fieldEl(first); if (fel) fel.focus(); return; }
-      state.loss_type = sel.value; state.owner = getOwner(); state.name = fname.value.trim().replace(/\s+/g, ' '); state.phone = fphone.value; state.zip = fzip.value.trim();
-      if (!state.address || /^ZIP\s+\d{5}$/i.test(state.address)) state.address = 'ZIP ' + state.zip;
+      state.loss_type = sel.value; state.owner = getOwner();
+      state.address = faddr.value.trim().replace(/\s+/g, ' ');
+      state.zip = fzip.value.trim();
+      state.name = fname.value.trim().replace(/\s+/g, ' ');
+      state.phone = fphone.value;
       state.step1 = true; save();
       dl('quiz_answer', { step: 1, answer: state.loss_type });
       dl('quiz_answer', { step: 2, answer: state.owner });
@@ -266,20 +291,18 @@
       if (state.lead_id && state.lead_phone === digitsOf(state.phone)) return show('3', true);
       saveLead(go1);
     });
-    markBad = function (errs) { Object.keys(errs).forEach(function (k) { bad(k === 'address' ? 'zip' : k, true); }); refreshSum(); };
+    markBad = function (errs) { Object.keys(errs).forEach(function (k) { bad(k, true); }); refreshSum(); };
   }
   if (faddr) acInit(faddr, function () { if (faddr.value) { state.address = faddr.value.trim(); save(); } });
 
-  // ---------- step 2 of 3 (s3): claim_status + optional street address ----------
+  // ---------- step 2 of 3 (s3): claim_status ----------
   d.addEventListener('click', function (e) {
     var o = e.target.closest('.opt'); if (!o || busy) return;
     var k = o.dataset.k, v = o.dataset.v;
     state[k] = v; save(); marks();
     if (k === 'claim_status') {
       dl('quiz_answer', { step: 3, answer: v });
-      var streetAddr = faddr && faddr.value ? faddr.value.trim() : '';
-      if (streetAddr) { state.address = streetAddr; save(); }
-      if (state.lead_id) fetch('/api/lead/' + encodeURIComponent(state.lead_id) + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claim_status: v, address: streetAddr }), keepalive: true }).catch(function () {});
+      if (state.lead_id) fetch('/api/lead/' + encodeURIComponent(state.lead_id) + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ claim_status: v, address: state.address || '' }), keepalive: true }).catch(function () {});
       setTimeout(function () { show('4', true); }, 160);
     }
   });
@@ -287,7 +310,7 @@
     busy = true; if (sum) sum.hidden = true; if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     var payload = {
       source: 'form', loss_type: state.loss_type, owner: state.owner, name: state.name, phone: state.phone,
-      address: state.address || ('ZIP ' + (state.zip || '')), zip: state.zip,
+      address: state.address, zip: state.zip,
       company: f1 ? f1.company.value : '', elapsed_ms: state.t0 ? Date.now() - state.t0 : null, page_variant: PVAR, landing_url: state.landing_url, referrer: state.referrer
     };
     for (var t in state.track) payload[t] = state.track[t];
@@ -299,7 +322,7 @@
         state.done_phone = e164;
         try {
           var qMirror = JSON.parse(sessionStorage.getItem('bs_quiz_v1') || '{}');
-          qMirror.done_phone = e164; qMirror.name = state.name || ''; qMirror.zip = state.zip || '';
+          qMirror.done_phone = e164; qMirror.name = state.name || ''; qMirror.zip = state.zip || ''; qMirror.address = state.address || '';
           sessionStorage.setItem('bs_quiz_v1', JSON.stringify(qMirror));
         } catch (err) {}
         state.fired = state.fired || {};
@@ -318,6 +341,7 @@
               address: {
                 first_name: nParts[0] || '',
                 last_name: nParts.slice(1).join(' ') || '',
+                street: state.address || '',
                 postal_code: state.zip || '',
                 country: 'US'
               }

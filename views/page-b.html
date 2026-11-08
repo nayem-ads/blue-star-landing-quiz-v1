@@ -242,17 +242,22 @@ h2:focus,h2:focus-visible{outline:none}
     </div>
     <span class="msg" id="e-owner"><svg class="ic"><use href="#i-alert"/></svg>Please select if you own or rent this property.</span>
    </div>
+   <div class="fld" data-f="address">
+    <div class="box"><label for="f-address">Property street address</label><input id="f-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" enterkeyhint="next" placeholder="123 Main St, City" required aria-describedby="e-address" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-address-list"></div>
+    <ul class="ac-list" id="f-address-list" role="listbox" aria-label="Address suggestions" hidden></ul>
+    <span class="msg" id="e-address"><svg class="ic"><use href="#i-alert"/></svg>Please enter the damaged property street address.</span>
+   </div>
+   <div class="fld" data-f="zip">
+    <div class="box"><label for="f-zip">Property ZIP code</label><input id="f-zip" name="zip" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="postal-code" enterkeyhint="next" placeholder="5-digit ZIP code (e.g. 92675)" required aria-describedby="e-zip"></div>
+    <span class="msg" id="e-zip"><svg class="ic"><use href="#i-alert"/></svg>Please enter the 5-digit property ZIP code.</span>
+   </div>
    <div class="fld" data-f="name">
     <div class="box"><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="First and last name" required aria-describedby="e-name"></div>
     <span class="msg" id="e-name"><svg class="ic"><use href="#i-alert"/></svg>Please enter your name.</span>
    </div>
    <div class="fld" data-f="phone">
-    <div class="box"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" enterkeyhint="next" placeholder="(415) 555 0142" required aria-describedby="e-phone"></div>
+    <div class="box"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" enterkeyhint="go" placeholder="(415) 555 0142" required aria-describedby="e-phone"></div>
     <span class="msg" id="e-phone"><svg class="ic"><use href="#i-alert"/></svg>Please enter a 10 digit US mobile number.</span>
-   </div>
-   <div class="fld" data-f="zip">
-    <div class="box"><label for="f-zip">Property ZIP code</label><input id="f-zip" name="zip" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" autocomplete="postal-code" enterkeyhint="go" placeholder="5-digit ZIP code (e.g. 92675)" required aria-describedby="e-zip"></div>
-    <span class="msg" id="e-zip"><svg class="ic"><use href="#i-alert"/></svg>Please enter the 5-digit property ZIP code.</span>
    </div>
    <input class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true">
    <p class="oneline">You agree we may call or text about this claim.</p>
@@ -274,14 +279,10 @@ h2:focus,h2:focus-visible{outline:none}
  <button class="btn2" type="button" id="own-back">I own it. Go back</button>
 </section>
 
-<!-- Step 2 of 3 (s3): claim status + optional street address -->
+<!-- Step 2 of 3 (s3): claim status -->
 <section class="screen" id="s3" data-step="3" aria-labelledby="h3">
  <div class="bp"><button class="back" type="button" data-back><svg class="ic"><use href="#i-back"/></svg>Back</button><span class="prog"><span class="bars" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></span>Step 2 of 3</span></div>
  <h2 id="h3" tabindex="-1">Where is your claim right now?</h2>
- <div class="fld" data-f="address">
-  <div class="box"><label for="f-address">Property street address (optional)</label><input id="f-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" enterkeyhint="done" placeholder="Helps us pull storm &amp; parcel data" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-address-list"></div>
-  <ul class="ac-list" id="f-address-list" role="listbox" aria-label="Address suggestions" hidden></ul>
- </div>
  <p class="sub">Tap your current claim stage to continue:</p>
  <button type="button" class="opt" data-k="claim_status" data-v="low_offer">Got an offer, it looks low<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
  <button type="button" class="opt" data-k="claim_status" data-v="denied">Denied, in full or in part<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
