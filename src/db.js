@@ -45,6 +45,8 @@ ALTER TABLE leads ADD COLUMN IF NOT EXISTS capi_status TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS hubspot_status TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS fbp TEXT;
 ALTER TABLE leads ADD COLUMN IF NOT EXISTS fbc TEXT;
+ALTER TABLE leads ADD COLUMN IF NOT EXISTS hubspot_contact_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS leads_hubspot_contact_id_idx ON leads (hubspot_contact_id) WHERE hubspot_contact_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS partial_leads (
   pid TEXT PRIMARY KEY,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -72,7 +74,7 @@ CREATE INDEX IF NOT EXISTS lead_files_lead_idx ON lead_files (public_id);
 
 const COLS = ['public_id','loss_type','claim_status','loss_timing','name','phone','zip','page_variant',
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid',
-  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam','source','email','notes','address','owner','fbp','fbc'];
+  'landing_url','referrer','user_agent','ip','seconds_to_submit','is_spam','source','email','notes','address','owner','fbp','fbc','hubspot_contact_id'];
 
 async function init() {
   if (!process.env.DATABASE_URL) {
@@ -212,6 +214,21 @@ async function findRecent(phone) {
   return r.rows[0] ? r.rows[0].public_id : null;
 }
 
+async function findByHubSpotId(hsId) {
+  const clean = String(hsId || '').trim();
+  if (!clean) return null;
+  if (!pool) {
+    if (!fs.existsSync(FILE)) return null;
+    for (const l of fs.readFileSync(FILE, 'utf8').split('\n')) {
+      if (!l) continue;
+      try { const r = JSON.parse(l); if (String(r.hubspot_contact_id || '') === clean && r.public_id) return r; } catch (_) {}
+    }
+    return null;
+  }
+  const r = await pool.query('SELECT * FROM leads WHERE hubspot_contact_id=$1 LIMIT 1', [clean]);
+  return r.rows[0] || null;
+}
+
 // ---------- unfinished forms (partial leads) ----------
 // status: open -> converted (they sent the form) | alerted (team emailed) | alert_failed
 const PCOLS = ['form', 'name', 'phone', 'address', 'zip', 'loss_type', 'owner', 'claim_status', 'loss_timing', 'page_variant',
@@ -286,4 +303,4 @@ async function ping() {
   return 'postgres';
 }
 
-module.exports = { init, findRecent, insertLead, setEmailStatus, claimFailedEmails, setSyncStatus, getLead, setCallback, setClaimStatus, listFiles, addFiles, setFileStatus, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, closePartial, hasLead, listPartials };
+module.exports = { init, findRecent, findByHubSpotId, insertLead, setEmailStatus, claimFailedEmails, setSyncStatus, getLead, setCallback, setClaimStatus, listFiles, addFiles, setFileStatus, listLeads, ping, upsertPartial, convertPartials, claimDuePartials, setPartialStatus, closePartial, hasLead, listPartials };

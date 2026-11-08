@@ -165,6 +165,136 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
     ok(/Bot Fast.*true|true.*Bot Fast/.test(csv.split('\n').find(l => l.includes('Bot Fast')) || ''), 'spam flagged in DB');
   }
   r = await fetch(BASE + '/admin/leads.csv?key=wrong'); ok(r.status === 404, 'CSV hidden without key');
+
+  // ---------- HubSpot Lead Ads / Form -> Email Notification Parity ----------
+  const { isEligibleHubSpotLead, parseHubSpotContactToLead, syncLeadAds } = require('../src/hubspot');
+  const { render: renderNotify, TO: getRecipients } = require('../src/notify');
+  const cutoff = Date.parse('2026-11-08T03:30:00.000Z');
+  const savedNotifyTo = process.env.NOTIFY_TO;
+  delete process.env.NOTIFY_TO;
+  const recips = getRecipients();
+  if (savedNotifyTo !== undefined) process.env.NOTIFY_TO = savedNotifyTo;
+  ok(recips[0] === 'mike@bluestaradjusters.com' && recips.includes('nayem.adsmanager@gmail.com'), 'Recipients match website exactly: To mike@bluestaradjusters.com, CC nayem.adsmanager@gmail.com');
+
+  ok(!isEligibleHubSpotLead({ id: '1', properties: { email: 'news@costar.com', hs_object_source: 'EMAIL_INTEGRATION', createdate: '2026-11-08T05:00:00Z' } }, cutoff), 'HubSpot filter rejects EMAIL_INTEGRATION inbox contacts');
+  ok(!isEligibleHubSpotLead({ id: '2', properties: { phone: '5093267510', hs_object_source: 'IMPORT', createdate: '2026-11-08T05:00:00Z' } }, cutoff), 'HubSpot filter rejects Excel IMPORT contacts');
+  ok(!isEligibleHubSpotLead({ id: '3', properties: { phone: '+19287153678', bs_lead_id: '79030ec8-c8b3-4bbf-bf7c-3e7e523a39ed', hs_object_source: 'ADS', createdate: '2026-11-08T05:00:00Z' } }, cutoff), 'HubSpot filter skips contacts already stamped with bs_lead_id');
+  ok(!isEligibleHubSpotLead({ id: '4', properties: { email: 'roy@test.com', hs_object_source: 'FORM', createdate: '2026-09-07T23:35:13Z' } }, cutoff), 'HubSpot filter rejects historical pre-cutoff contacts');
+
+  const sampleHsContact = {
+    id: '991234567890',
+    properties: {
+      firstname: 'Marcus',
+      lastname: 'Vance',
+      phone: '+16025550188',
+      email: 'marcus.vance@example.com',
+      address: '4812 E Ray Rd',
+      city: 'Phoenix',
+      state: 'Arizona',
+      zip: '85044-1234',
+      do_you_own_the_damaged_property: 'yes,_homeowner',
+      what_happened_to_your_property: 'hail,_wind_or_roof_damage',
+      hs_object_source: 'ADS',
+      hs_latest_source: 'PAID_SOCIAL',
+      hs_latest_source_data_1: 'Facebook',
+      hs_latest_source_data_2: 'BSA | AZ Hail + CA Fire & Smoke | Instant Form Leads | CBO $75',
+      hs_object_source_detail_3: 'azh_if_01_ceiling_stain',
+      recent_conversion_event_name: 'Facebook Lead Ads: BSA | Homeowner & Commercial Claim Check | Address + Higher Intent | Nov26',
+      createdate: '2026-11-08T05:00:00.000Z',
+    },
+  };
+  ok(isEligibleHubSpotLead(sampleHsContact, cutoff), 'HubSpot filter accepts genuine Meta Instant Form contact');
+  const parsedHs = parseHubSpotContactToLead(sampleHsContact);
+  ok(parsedHs.address === '4812 E Ray Rd, Phoenix, AZ 85044' && parsedHs.zip === '85044' && parsedHs.property_state === 'AZ' && parsedHs.owner === 'own_home' && parsedHs.loss_type === 'hail' && parsedHs.phone === '(602) 555-0188', 'HubSpot Lead Ad mapper formats street+city+state+ZIP, phone, owner, and peril');
+  const renderedHs = renderNotify({ ...parsedHs, public_id: 'hs-uuid-1', hubspot_deal_id: '555000111', hubspot_deal_url: 'https://app-eu1.hubspot.com/contacts/149045473/record/0-3/555000111' });
+  ok(
+    renderedHs.subject.includes('[AZ · Phoenix & East Valley (85044)]') &&
+    renderedHs.subject.includes('Hail, wind or roof damage') &&
+    renderedHs.html.includes('4812 E Ray Rd, Phoenix, AZ 85044') &&
+    renderedHs.html.includes('Meta Paid Ads — Instant Form (Synced via HubSpot)') &&
+    renderedHs.html.includes('Meta Instant Form CBO — AZ Hail &amp; CA Fire/Smoke') &&
+    renderedHs.html.includes('AZ Hail — Ceiling Stain / Hidden Roof Leak') &&
+    renderedHs.html.includes('https://app-eu1.hubspot.com/contacts/149045473/record/0-1/991234567890') &&
+    renderedHs.html.includes('Open Deal in Blue Star Leads'),
+    'Rendered HubSpot email matches website template with full property address, Maps link, campaign, creative, and HubSpot links'
+  );
+
+  // Renter handling on Meta Instant Form
+  const renterHs = parseHubSpotContactToLead({
+    id: '991234567891',
+    properties: { ...sampleHsContact.properties, do_you_own_the_damaged_property: 'No, I rent' },
+  });
+  const renderedRenter = renderNotify({ ...renterHs, public_id: 'hs-uuid-2' });
+  ok(renterHs.owner === 'rent' && renderedRenter.subject.startsWith('[RENTER — Do Not Call]') && renderedRenter.html.includes('Disqualified Ownership Answer'), 'Meta Instant Form renter clearly flagged [RENTER — Do Not Call] in subject and banner');
+
+  // End-to-end syncLeadAds mock server verification (proving deal creation + bs_lead_id stamp + zero duplicate emails)
+  const http = require('http');
+  const hsPatches = [], hsDeals = [], sentNotifications = [];
+  let stampedId = '';
+  const mockHs = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', c => { body += c; });
+    req.on('end', () => {
+      res.setHeader('Content-Type', 'application/json');
+      if (req.url === '/crm/v3/properties/contacts') {
+        return res.end(JSON.stringify({ results: [
+          { groupName: 'lead_ads', name: 'do_you_own_the_damaged_property', label: 'Do you own the damaged property?' },
+          { groupName: 'lead_ads', name: 'what_happened_to_your_property', label: 'What happened to your property?' },
+        ] }));
+      }
+      if (req.url === '/crm/v3/objects/contacts/search') {
+        return res.end(JSON.stringify({ results: [
+          { id: '888001', properties: { email: 'inbox@tillys.com', hs_object_source: 'EMAIL_INTEGRATION', createdate: '2026-11-08T05:00:00.000Z' } },
+          { id: '999001', properties: { ...sampleHsContact.properties, bs_lead_id: stampedId } },
+        ] }));
+      }
+      if (req.url === '/crm/v3/pipelines/deals') {
+        return res.end(JSON.stringify({ results: [{ id: '4288676036', label: 'Blue Star Leads', stages: [{ id: '6337571038', label: 'New lead' }] }] }));
+      }
+      if (req.url === '/crm/v3/objects/deals' && req.method === 'POST') {
+        const parsed = JSON.parse(body);
+        hsDeals.push(parsed);
+        return res.end(JSON.stringify({ id: '777001' }));
+      }
+      if (req.url.startsWith('/crm/v3/objects/contacts/999001') && req.method === 'PATCH') {
+        const parsed = JSON.parse(body);
+        hsPatches.push(parsed);
+        if (parsed.properties && parsed.properties.bs_lead_id) stampedId = parsed.properties.bs_lead_id;
+        return res.end(JSON.stringify({ id: '999001' }));
+      }
+      res.end(JSON.stringify({ results: [] }));
+    });
+  });
+  await new Promise(r => mockHs.listen(0, '127.0.0.1', r));
+  const mockPort = mockHs.address().port;
+  const prevApi = process.env.HUBSPOT_API, prevTok = process.env.HUBSPOT_TOKEN, prevSync = process.env.HUBSPOT_LEAD_SYNC;
+  process.env.HUBSPOT_API = `http://127.0.0.1:${mockPort}`;
+  process.env.HUBSPOT_TOKEN = 'mock-hs-token';
+  delete process.env.HUBSPOT_LEAD_SYNC;
+  const memDbRows = new Map();
+  const mockDb = {
+    findByHubSpotId: async id => [...memDbRows.values()].find(x => x.hubspot_contact_id === id) || null,
+    hasLead: async () => false,
+    insertLead: async l => { const row = { ...l, public_id: '00000000-0000-4000-8000-000000999001' }; memDbRows.set(row.public_id, row); return row; },
+    setSyncStatus: async () => {},
+    setEmailStatus: async () => {},
+  };
+  const run1 = await syncLeadAds({ db: mockDb, notifyLead: async l => { sentNotifications.push(l); return 'sent:resend'; }, immediate: true });
+  const run2 = await syncLeadAds({ db: mockDb, notifyLead: async l => { sentNotifications.push(l); return 'sent:resend'; }, immediate: true });
+  mockHs.close();
+  if (prevApi === undefined) delete process.env.HUBSPOT_API; else process.env.HUBSPOT_API = prevApi;
+  if (prevTok === undefined) delete process.env.HUBSPOT_TOKEN; else process.env.HUBSPOT_TOKEN = prevTok;
+  if (prevSync === undefined) delete process.env.HUBSPOT_LEAD_SYNC; else process.env.HUBSPOT_LEAD_SYNC = prevSync;
+
+  ok(
+    run1.ok && run1.synced === 1 && run2.synced === 0 &&
+    sentNotifications.length === 1 &&
+    sentNotifications[0].hubspot_deal_id === '777001' &&
+    hsDeals.length === 1 && hsDeals[0].properties.bs_form === 'form' && hsDeals[0].properties.bs_loss_type === 'storm' &&
+    hsPatches.some(p => p.properties.bs_lead_id === '00000000-0000-4000-8000-000000999001' && p.properties.bs_owner === 'own_home'),
+    'End-to-end syncLeadAds creates Blue Star Leads deal, stamps bs_lead_id, ignores inbox contacts, and sends exactly 1 email across repeated polls'
+  );
+
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

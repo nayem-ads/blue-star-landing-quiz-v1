@@ -608,6 +608,7 @@ async function retryFailedEmails() {
 }
 async function sweepPartials() {
   await retryFailedEmails();
+  await hubspot.syncLeadAds({ db, notifyLead }).catch(e => console.error('[hubspot-sync]', e.message));
   if (process.env.PARTIAL_ALERTS === 'off') return;
   let due = [];
   try { due = await db.claimDuePartials(PARTIAL_DELAY_MIN); } catch (e) { return console.error('[partial] sweep', e.message); }
@@ -642,7 +643,7 @@ app.get('/admin/leads.csv', async (req, res) => {
   if (!key || req.query.key !== key) return res.status(404).send('Not found');
   const rows = await db.listLeads();
   if (req.query.format === 'json') return res.set({ 'Cache-Control': 'no-store' }).json({ ok: true, count: rows.length, rows });
-  const cols = ['created_at', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'capi_status', 'hubspot_status', 'is_spam', 'public_id'];
+  const cols = ['created_at', 'name', 'phone', 'address', 'zip', 'loss_type', 'claim_status', 'loss_timing', 'callback_slot', 'source', 'email', 'notes', 'page_variant', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'email_status', 'capi_status', 'hubspot_status', 'hubspot_contact_id', 'is_spam', 'public_id'];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="bluestar-leads.csv"', 'Cache-Control': 'no-store' });
   res.send([cols.join(','), ...rows.map(r => cols.map(c => q(r[c] instanceof Date ? r[c].toISOString() : r[c])).join(','))].join('\n'));
@@ -659,6 +660,14 @@ app.get('/admin/resync', async (req, res) => {
   await db.setSyncStatus(lead.public_id, 'capi_status', c).catch(() => {});
   await db.setSyncStatus(lead.public_id, 'hubspot_status', h).catch(() => {});
   res.json({ ok: true, capi: c, hubspot: h });
+});
+
+// Trigger an immediate HubSpot Lead Ad -> Resend notification sync: /admin/sync-hubspot?key=YOUR_ADMIN_KEY
+app.get('/admin/sync-hubspot', async (req, res) => {
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) return res.status(404).send('Not found');
+  const out = await hubspot.syncLeadAds({ db, notifyLead, immediate: req.query.immediate === '1' });
+  res.set({ 'Cache-Control': 'no-store' }).json(out);
 });
 
 // Send yourself a test alert after deploy: /admin/test-email?key=YOUR_ADMIN_KEY
@@ -701,6 +710,7 @@ app.get('/health', async (req, res) => {
       storage: await db.ping(),
       split_b: SPLIT_B,
       s3: s3.configured(),
+      hubspot_sync: hubspot.syncStatus(),
       email: {
         provider: process.env.RESEND_API_KEY ? 'resend' : 'formsubmit',
         from: (process.env.EMAIL_FROM || 'Blue Star Adjusters <lead@bluestaradjusters.com>').replace(/^.*</, '').replace(/>.*$/, '').trim(),
@@ -717,6 +727,7 @@ app.use((req, res) => res.redirect(302, '/'));
 db.init()
   .then(() => app.listen(PORT, '0.0.0.0', () => console.log(`[web] listening on ${PORT}`)))
   .then(() => {
+    setTimeout(() => hubspot.syncLeadAds({ db, notifyLead }).catch(e => console.error('[hubspot-sync]', e.message)), 10000).unref();
     if (!s3.configured()) return console.warn('[s3] not configured, uploads disabled');
     s3.ensureCors()
       .then(r => r.ok ? console.log(`[s3] CORS set for ${r.origins.join(', ')}`) : console.error(`[s3] CORS failed ${r.status}: ${r.body}`))

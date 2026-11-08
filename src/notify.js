@@ -65,6 +65,16 @@ const CAMPAIGN_MAP = {
   '120248791830950534': { market: 'AZ · Phoenix & East Valley', label: 'AZ Phoenix — Hail & Storm Claims', state: 'AZ' },
   bsa_lp_zips: { market: 'CA · High-Loss ZIPs', label: 'CA — Property Loss ZIPs Funnel', state: 'CA' },
   bsa_if_la: { market: 'CA · Los Angeles', label: 'CA Los Angeles — Fire & Smoke Claims', state: 'CA' },
+  // Option A Live Meta Instant Form CBO + Ad Sets
+  bsa_if_az_ca: { market: 'AZ & CA · Hail / Fire & Smoke', label: 'Meta Instant Form CBO — AZ Hail & CA Fire/Smoke', state: '' },
+  '120248897062050534': { market: 'AZ & CA · Hail / Fire & Smoke', label: 'Meta Instant Form CBO — AZ Hail & CA Fire/Smoke', state: '' },
+  'bsa | az hail + ca fire & smoke | instant form leads | cbo $75': { market: 'AZ & CA · Hail / Fire & Smoke', label: 'Meta Instant Form CBO — AZ Hail & CA Fire/Smoke', state: '' },
+  '120248897076100534': { market: 'AZ · Phoenix & East Valley', label: 'AZ Hail ZIPs — Meta Instant Form', state: 'AZ' },
+  '120248897076510534': { market: 'CA · Altadena, Pasadena & Palisades', label: 'CA Fire & Smoke ZIPs — Meta Instant Form', state: 'CA' },
+  // Option A Live Google Search Campaigns
+  '24425040654': { market: 'AZ · Arizona Search', label: 'Google Search — Arizona Hail, Roof & PA', state: 'AZ' },
+  '24435970771': { market: 'CA · California Search', label: 'Google Search — California Fire, Smoke & Property', state: 'CA' },
+  '24425040627': { market: 'CO · Colorado Search', label: 'Google Search — Colorado Hail & Commercial PA', state: 'CO' },
 };
 
 const CREATIVE_MAP = {
@@ -101,6 +111,12 @@ const CREATIVE_MAP = {
   la_02_smoke: 'Standing Home Wildfire Smoke & HVAC Duct Testing',
   la_03_proof: '$17K Carrier Smoke Offer -> ~$1.1M Case Proof',
   la_04_table: 'Carrier Adjuster vs. Public Adjuster Comparison',
+  azh_if_01_ceiling_stain: 'AZ Hail — Ceiling Stain / Hidden Roof Leak',
+  azh_if_02_cracked_tiles: 'AZ Hail — Cracked Concrete Roof Tiles',
+  azh_if_03_before_accept: 'AZ Hail — Check Estimate Before Accepting Offer',
+  caf_if_01_hvac_filter: 'CA Fire/Smoke — Soot on HVAC Filter',
+  caf_if_02_smoke_ducts: 'CA Fire/Smoke — Standing Home Duct & Wall Smoke',
+  caf_if_03_rebuild_gap: 'CA Fire/Smoke — Rebuild Estimate vs. Builder Bid',
   '04': 'Estimate Too Low to Rebuild (#04)',
   '07': 'Adjuster Not Calling Back (#07)',
   '08': 'Fourth Adjuster — Stop Starting Over (#08)',
@@ -143,6 +159,14 @@ const HERO_HEADLINES = {
   'two-adj': 'The insurer’s adjuster works for them. Hire a licensed public adjuster who works for you.',
   checklist: 'Before you cash that insurance check, have a licensed public adjuster review it free.',
   'case-proof': 'Insurer offered $17K for smoke. Get your claim checked before you settle.',
+  pa: 'Licensed public adjuster on your side. Get a free second opinion.',
+  'pa-fire': 'Fire or wildfire smoke claim? Have a senior public adjuster check every line.',
+  'pa-smoke': 'Hidden wildfire smoke or soot damage? Get your attic and ducts checked free.',
+  'pa-hail': 'Hail or roof claim denied or underpaid? Get a free senior adjuster review.',
+  'pa-water': 'Water damage or pipe burst offer too low? Have a senior public adjuster price what was missed.',
+  'pa-denied': 'Property insurance claim denied or lowballed? Get a free second opinion today.',
+  'pa-commercial': 'Commercial, HOA or large property claim? Senior public adjusters lead every file.',
+  'pa-or': 'Independent Oregon public adjusters representing property policyholders.',
 };
 
 function humanizeSlug(slug) {
@@ -165,17 +189,25 @@ function decodeAttribution(lead) {
   const utmCampaign = (lead.utm_campaign || q('utm_campaign') || '').trim();
   const utmContent = (lead.utm_content || q('utm_content') || '').trim();
   const utmTerm = (lead.utm_term || q('utm_term') || q('hsa_kw') || '').trim();
-  const hsaCam = q('hsa_cam').trim();
-  const hsaGrp = q('hsa_grp').trim();
-  const hsaAd = q('hsa_ad').trim();
+  const hsaCam = (lead.hsa_cam || q('hsa_cam') || '').trim();
+  const hsaGrp = (lead.hsa_grp || q('hsa_grp') || '').trim();
+  const hsaAd = (lead.hsa_ad || q('hsa_ad') || '').trim();
   const fbclid = (lead.fbclid || q('fbclid') || '').trim();
   const gclid = (lead.gclid || lead.gbraid || lead.wbraid || q('gclid') || q('gbraid') || q('wbraid') || '').trim();
-  const heroKey = (q('h') || (lead.page_variant && lead.page_variant !== 'b' ? lead.page_variant : '') || q('loss') || '').toLowerCase();
+  const heroKey = (q('h') || (lead.page_variant && !['b', 'instant_form', 'hubspot', 'website'].includes(lead.page_variant) ? lead.page_variant : '') || q('loss') || '').toLowerCase();
 
   // Channel
   const srcLo = utmSource.toLowerCase();
   let channel = 'Direct Visit';
-  if (fbclid || /^(meta|fb|facebook|ig|instagram)$/.test(srcLo)) {
+  if (lead.source === 'instant_form') {
+    channel = 'Meta Paid Ads — Instant Form (Synced via HubSpot)';
+  } else if (lead.source === 'hubspot') {
+    channel = fbclid || /^(meta|fb|facebook|ig|instagram)$/.test(srcLo)
+      ? 'Meta Paid Ads (Synced via HubSpot)'
+      : gclid || (srcLo === 'google' && /cpc|ppc|paid/i.test(utmMedium))
+        ? 'Google Paid Search Ads (Synced via HubSpot)'
+        : 'HubSpot CRM Form';
+  } else if (fbclid || /^(meta|fb|facebook|ig|instagram)$/.test(srcLo)) {
     channel = 'Meta Paid Ads (Facebook / Instagram)';
   } else if (gclid || (srcLo === 'google' && /cpc|ppc|paid/i.test(utmMedium))) {
     channel = 'Google Paid Search Ads';
@@ -189,14 +221,16 @@ function decodeAttribution(lead) {
   }
 
   // Campaign & Market
-  const campEntry = CAMPAIGN_MAP[utmCampaign.toLowerCase()] || CAMPAIGN_MAP[hsaCam] || null;
+  const campEntry = CAMPAIGN_MAP[utmCampaign.toLowerCase()] || CAMPAIGN_MAP[hsaCam] || CAMPAIGN_MAP[hsaGrp] || null;
   let campaignDisplay = '';
   if (campEntry) {
-    campaignDisplay = utmCampaign && utmCampaign !== hsaCam
+    campaignDisplay = utmCampaign && utmCampaign !== hsaCam && !/^\d+$/.test(utmCampaign)
       ? `${campEntry.label} (${utmCampaign})`
       : campEntry.label;
   } else if (utmCampaign) {
-    campaignDisplay = `${humanizeSlug(utmCampaign)} (${utmCampaign})`;
+    campaignDisplay = /^\d{10,}$/.test(utmCampaign)
+      ? `Campaign ID ${utmCampaign}`
+      : (utmCampaign.includes('|') || utmCampaign.includes(' ') ? utmCampaign : `${humanizeSlug(utmCampaign)} (${utmCampaign})`);
   } else if (hsaCam) {
     campaignDisplay = `Campaign ID ${hsaCam}`;
   }
@@ -204,12 +238,23 @@ function decodeAttribution(lead) {
   // State / Market badge
   const addrStateMatch = String(lead.address || '').match(/,\s*([A-Z]{2})\s+\d{5}\b/) || String(lead.address || '').match(/\b(CA|WA|NV|CO|AZ|OR|ID|MT)\b/);
   const urlState = (q('state') || '').toUpperCase();
-  const propState = (lead.property_state || zipToState(lead.zip) || (addrStateMatch ? addrStateMatch[1] : '') || (campEntry ? campEntry.state : '') || urlState || '').toUpperCase();
-  const marketBadge = campEntry
-    ? campEntry.market
-    : propState
-      ? `${propState}${lead.zip ? ' · ' + lead.zip : ''}`
-      : (lead.zip ? `ZIP ${lead.zip}` : 'Claim Review');
+  const propState = (lead.property_state || zipToState(lead.zip) || (addrStateMatch ? addrStateMatch[1] : '') || (campEntry && campEntry.state ? campEntry.state : '') || urlState || '').toUpperCase();
+  let marketBadge = '';
+  if (campEntry && campEntry.state) {
+    marketBadge = campEntry.market;
+  } else if (campEntry && !campEntry.state && propState) {
+    marketBadge = propState === 'AZ'
+      ? `AZ · Phoenix & East Valley${lead.zip ? ' (' + lead.zip + ')' : ''}`
+      : propState === 'CA'
+        ? `CA · Fire & Smoke${lead.zip ? ' (' + lead.zip + ')' : ''}`
+        : `${propState}${lead.zip ? ' · ' + lead.zip : ''}`;
+  } else if (campEntry) {
+    marketBadge = campEntry.market;
+  } else if (propState) {
+    marketBadge = `${propState}${lead.zip ? ' · ' + lead.zip : ''}`;
+  } else {
+    marketBadge = lead.zip ? `ZIP ${lead.zip}` : 'Claim Review';
+  }
 
   // Creative / Ad Angle
   const creativeKnown = CREATIVE_MAP[utmContent.toLowerCase()] || CREATIVE_MAP[utmContent];
@@ -217,7 +262,7 @@ function decodeAttribution(lead) {
   if (creativeKnown) {
     creativeDisplay = `${creativeKnown} [${utmContent}]`;
   } else if (utmContent) {
-    creativeDisplay = `${humanizeSlug(utmContent)} [${utmContent}]`;
+    creativeDisplay = utmContent.includes('|') || utmContent.includes(' ') ? utmContent : `${humanizeSlug(utmContent)} [${utmContent}]`;
   } else if (hsaAd) {
     creativeDisplay = `Ad ID ${hsaAd}`;
   }
@@ -226,13 +271,17 @@ function decodeAttribution(lead) {
   const headlineDisplay = HERO_HEADLINES[heroKey] || (lead.page_variant === 'b' ? 'Multi-step property claim form (Page B)' : '');
 
   // Form / Funnel label (keep exact legacy strings in rowsFor for FormSubmit test compatibility, and descriptive label for HTML)
-  const formLabel = lead.source === 'website'
-    ? `Main Website — ${lead.form_location || 'bluestaradjusters.com'}`
-    : lead.source === 'contact'
-      ? 'Quiz Funnel — Bottom Contact Form'
-      : lead.source === 'form'
-        ? 'Quiz Funnel — Page B (Multi-Step Form)'
-        : 'Quiz Funnel — Page A (4-Step Claim Quiz)';
+  const formLabel = lead.source === 'instant_form'
+    ? `Meta Instant Form — ${lead.form_location || 'HubSpot Lead Sync'}`
+    : lead.source === 'hubspot'
+      ? `HubSpot CRM Form — ${lead.form_location || 'HubSpot'}`
+      : lead.source === 'website'
+        ? `Main Website — ${lead.form_location || 'bluestaradjusters.com'}`
+        : lead.source === 'contact'
+          ? 'Quiz Funnel — Bottom Contact Form'
+          : lead.source === 'form'
+            ? 'Quiz Funnel — Page B (Multi-Step Form)'
+            : 'Quiz Funnel — Page A (4-Step Claim Quiz)';
 
   return {
     channel,
@@ -251,24 +300,37 @@ function decodeAttribution(lead) {
   };
 }
 
+const HUBSPOT_PORTAL_URL = 'https://app-eu1.hubspot.com/contacts/149045473/record';
+
+function hubspotLinks(lead) {
+  const contactUrl = lead.hubspot_url || (lead.hubspot_contact_id ? `${HUBSPOT_PORTAL_URL}/0-1/${encodeURIComponent(lead.hubspot_contact_id)}` : '');
+  const dealUrl = lead.hubspot_deal_url || (lead.hubspot_deal_id ? `${HUBSPOT_PORTAL_URL}/0-3/${encodeURIComponent(lead.hubspot_deal_id)}` : '');
+  return { contactUrl, dealUrl };
+}
+
 function rowsFor(lead) {
   const telDigits = String(lead.phone || '').replace(/\D/g, '');
   const attr = decodeAttribution(lead);
-  const legacyForm = lead.source === 'website'
-    ? `Main website (${lead.form_location || 'bluestaradjusters.com'})`
-    : lead.source === 'contact'
-      ? 'Contact form (bottom of page)'
-      : lead.source === 'form'
-        ? 'Page B (multi-step form)'
-        : 'Quiz';
+  const { contactUrl, dealUrl } = hubspotLinks(lead);
+  const legacyForm = lead.source === 'instant_form'
+    ? `Meta Instant Form (${lead.form_location || 'HubSpot'})`
+    : lead.source === 'hubspot'
+      ? `HubSpot Form (${lead.form_location || 'HubSpot'})`
+      : lead.source === 'website'
+        ? `Main website (${lead.form_location || 'bluestaradjusters.com'})`
+        : lead.source === 'contact'
+          ? 'Contact form (bottom of page)'
+          : lead.source === 'form'
+            ? 'Page B (multi-step form)'
+            : 'Quiz';
   return [
     ['Name', lead.name],
-    ['Phone', lead.phone, telDigits ? `tel:+1${telDigits}` : null],
+    ['Phone', lead.phone, telDigits.length === 10 ? `tel:+1${telDigits}` : null],
     ['Email', lead.email, lead.email ? `mailto:${lead.email}` : null],
     ['Property address', lead.address],
     ['State / ZIP', [attr.propState, lead.zip].filter(Boolean).join(' · ') || null],
     ['What happened', lead.loss_label || LABELS.loss_type[lead.loss_type] || lead.loss_type],
-    ['Ownership', LABELS.owner[lead.owner] || lead.owner],
+    ['Ownership', lead.owner_label || LABELS.owner[lead.owner] || lead.owner],
     ['Claim status', LABELS.claim_status[lead.claim_status] || lead.claim_status],
     ['When', LABELS.loss_timing[lead.loss_timing] || lead.loss_timing],
     ['Message', lead.notes],
@@ -280,6 +342,8 @@ function rowsFor(lead) {
     ['Headline shown', attr.headlineDisplay],
     ['Form', legacyForm],
     ['Page version', lead.page_variant],
+    ['HubSpot Contact', contactUrl],
+    ['HubSpot Deal', dealUrl],
     ['Received', ptTime(lead.created_at)],
     ['Landing URL', lead.landing_url],
     ['Lead ID', lead.public_id],
@@ -308,18 +372,22 @@ function sectionTable(title, items) {
 function render(lead) {
   const rows = rowsFor(lead);
   const attr = decodeAttribution(lead);
+  const { contactUrl, dealUrl } = hubspotLinks(lead);
   const telDigits = String(lead.phone || '').replace(/\D/g, '');
+  const validPhone = telDigits.length === 10;
+  const isRenter = lead.owner === 'rent';
   const lossText = lead.loss_label || LABELS.loss_type[lead.loss_type] || lead.loss_type || 'Claim Review';
   const claimText = LABELS.claim_status[lead.claim_status] || lead.claim_status || '';
-  const ownerText = LABELS.owner[lead.owner] || lead.owner || '';
+  const ownerText = lead.owner_label || LABELS.owner[lead.owner] || lead.owner || '';
   const mapsUrl = lead.address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address)}` : '';
 
-  const tag = attr.propState ? `[${attr.marketBadge}] ` : '';
-  const subject = `${tag}New ${lossText} Lead — ${lead.name} · ${lead.phone}`;
+  const tag = attr.propState ? `[${attr.marketBadge}] ` : (attr.marketBadge && attr.marketBadge !== 'Claim Review' ? `[${attr.marketBadge}] ` : '');
+  const renterPrefix = isRenter ? '[RENTER — Do Not Call] ' : '';
+  const subject = `${renterPrefix}${tag}New ${lossText} Lead — ${lead.name} · ${lead.phone}`;
 
   const contactItems = [
     ['Homeowner / Contact', lead.name, { bold: true }],
-    ['Phone Number', lead.phone, telDigits ? { href: `tel:+1${telDigits}`, bold: true } : { bold: true }],
+    ['Phone Number', lead.phone, validPhone ? { href: `tel:+1${telDigits}`, bold: true } : { bold: true }],
     ['Email Address', lead.email, lead.email ? { href: `mailto:${lead.email}` } : {}],
     ['Property Address', lead.address, mapsUrl ? { subHtml: `<a href="${esc(mapsUrl)}" style="color:#1D4ED8;text-decoration:none">Open in Google Maps &#8599;</a>` } : {}],
     ['State / ZIP', [attr.propState, lead.zip].filter(Boolean).join(' · ')],
@@ -328,7 +396,7 @@ function render(lead) {
 
   const claimItems = [
     ['Damage / Loss Type', lossText, { bold: true }],
-    ['Property Ownership', ownerText],
+    ['Property Ownership', ownerText, isRenter ? { bold: true } : {}],
     ['Claim Status', claimText || (lead.source === 'form' ? 'Step 2 saved (completing on next screen)' : null)],
     ['When Loss Occurred', LABELS.loss_timing[lead.loss_timing] || lead.loss_timing],
     ['Notes / Message', lead.notes],
@@ -341,33 +409,44 @@ function render(lead) {
     attr.hsaAd ? `Ad ID: ${attr.hsaAd}` : '',
   ].filter(Boolean).join(' · ');
 
+  const hsSubHtml = dealUrl
+    ? `<a href="${esc(dealUrl)}" style="color:#1D4ED8;text-decoration:none">Open Deal in Blue Star Leads &#8599;</a>`
+    : '';
+
   const sourceItems = [
     ['Traffic Channel', attr.channel, { bold: true }],
-    ['Campaign & Market', attr.campaignDisplay || (lead.source === 'website' ? 'Direct / Website Organic' : 'Unattributed / Direct'), adIdsLine ? { sub: adIdsLine } : {}],
+    ['Campaign & Market', attr.campaignDisplay || (lead.source === 'website' ? 'Direct / Website Organic' : lead.source === 'instant_form' ? 'Meta Lead Ads Campaign' : 'Unattributed / Direct'), adIdsLine ? { sub: adIdsLine } : {}],
     ['Ad Creative & Angle', attr.creativeDisplay],
     ['Search Keyword', attr.utmTerm],
     ['Headline Shown on LP', attr.headlineDisplay],
     ['Funnel / Form Path', attr.formLabel],
+    ['HubSpot CRM Record', contactUrl ? `Contact #${lead.hubspot_contact_id || 'Record'} ↗` : null, contactUrl ? { href: contactUrl, ...(hsSubHtml ? { sub: 'Deal', subHtml: hsSubHtml } : {}) } : {}],
     ['Landing Page URL', lead.landing_url, { mono: true }],
     ['Lead Reference ID', lead.public_id, { mono: true }],
   ];
 
+  const renterBanner = isRenter
+    ? `<div style="margin-top:16px;padding:12px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:6px;font-size:13px;color:#991B1B;line-height:1.45"><b>Disqualified Ownership Answer (Renter / Tenant):</b> Blue Star Adjusters handles building claims for property owners only. Logged for Meta/HubSpot tracking parity; no sales deal was created.</div>`
+    : '';
+
   const html = `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#F1F5F9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#0F172A">
   <div style="max-width:640px;margin:0 auto;padding:24px 12px">
-    <div style="background:#FFFFFF;border:1px solid #CBD5E1;border-top:4px solid #1D4ED8;border-radius:8px;overflow:hidden;box-shadow:0 4px 12px rgba(15,23,42,0.06)">
+    <div style="background:#FFFFFF;border:1px solid #CBD5E1;border-top:4px solid ${isRenter ? '#DC2626' : '#1D4ED8'};border-radius:8px;overflow:hidden;box-shadow:0 4px 12px rgba(15,23,42,0.06)">
       <div style="background:#0B1536;padding:22px 24px;color:#FFFFFF">
-        <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#93C5FD;margin-bottom:6px">
-          BLUE STAR ADJUSTERS &middot; ${esc(attr.marketBadge)}
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${isRenter ? '#FCA5A5' : '#93C5FD'};margin-bottom:6px">
+          BLUE STAR ADJUSTERS &middot; ${esc(attr.marketBadge)}${isRenter ? ' &middot; RENTER (DO NOT CALL)' : ''}
         </div>
         <div style="font-size:22px;font-weight:700;line-height:1.25;margin:0 0 6px;color:#FFFFFF">${esc(lead.name)}</div>
         <div style="font-size:14px;color:#CBD5E1;margin:0 0 16px">
           ${esc(lossText)}${claimText ? ' &middot; ' + esc(claimText) : ''}${lead.address ? ' &middot; ' + esc(lead.address) : ''}
         </div>
-        ${telDigits ? `<a href="tel:+1${esc(telDigits)}" style="display:inline-block;background:#2563EB;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none;padding:10px 18px;border-radius:6px">Call ${esc(lead.phone)}</a>` : ''}
-        ${mapsUrl ? `<a href="${esc(mapsUrl)}" style="display:inline-block;background:rgba(255,255,255,0.12);color:#FFFFFF;font-size:13px;font-weight:600;text-decoration:none;padding:10px 14px;border-radius:6px;margin-left:8px">View Map &#8599;</a>` : ''}
+        ${validPhone && !isRenter ? `<a href="tel:+1${esc(telDigits)}" style="display:inline-block;background:#2563EB;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none;padding:10px 18px;border-radius:6px">Call ${esc(lead.phone)}</a>` : ''}
+        ${mapsUrl ? `<a href="${esc(mapsUrl)}" style="display:inline-block;background:rgba(255,255,255,0.12);color:#FFFFFF;font-size:13px;font-weight:600;text-decoration:none;padding:10px 14px;border-radius:6px;${validPhone && !isRenter ? 'margin-left:8px;' : ''}">View Map &#8599;</a>` : ''}
+        ${contactUrl ? `<a href="${esc(contactUrl)}" style="display:inline-block;background:rgba(255,255,255,0.12);color:#FFFFFF;font-size:13px;font-weight:600;text-decoration:none;padding:10px 14px;border-radius:6px;margin-left:8px">Open in HubSpot &#8599;</a>` : ''}
       </div>
       <div style="padding:8px 24px 24px">
+        ${renterBanner}
         ${sectionTable('1. Contact & Property', contactItems)}
         ${sectionTable('2. Claim & Qualification Details', claimItems)}
         ${sectionTable('3. Campaign, Ad Creative & Funnel Source', sourceItems)}
