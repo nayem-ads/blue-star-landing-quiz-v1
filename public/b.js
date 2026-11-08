@@ -1,10 +1,11 @@
-// Page B (V5 multi-step). Step 1 saves an unfinished form only. The lead saves at the ownership answer (step 2).
+// Page B (1-screen qualified homeowner claim check). Step 1 filters renters and saves full owner leads immediately.
 (function () {
   'use strict';
   var d = document, w = window, body = d.body;
   var KEY = 'bs_b_v1';
   var TRACK = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'hsa_cam', 'hsa_grp', 'hsa_ad', 'hsa_kw', 'matchtype', 'device'];
   var LOSS = { fire: 1, smoke: 1, water: 1, storm: 1, hail: 1, denied: 1, other: 1 };
+  var OWN = { own_home: 1, landlord: 1, rent: 1 };
   var CALL = 'Please try again or call toll free (888) 971-2524.';
   function load() { try { return JSON.parse(sessionStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
   function save() { try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
@@ -48,19 +49,19 @@
   d.addEventListener('click', function (e) { var c = e.target.closest('[data-call]'); if (c) dl('call_click', { location: c.dataset.call }); });
 
   // ---------- screens ----------
-  var ORDER = { '1': 1, '2': 2, '2b': 2, '3': 3, '4': 4, '5': 5 };
   function show(step, push) {
     if (TY) step = '5';
     else {
-      if (step !== '1' && !state.step1) step = '1';
-      if ((step === '3' || step === '4') && !state.lead_id) step = '2';
+      if (step === '2') step = state.lead_id ? '3' : '1';
+      if (step !== '1' && step !== '2b' && !state.step1) step = '1';
+      if ((step === '3' || step === '4') && !state.lead_id) step = '1';
       if (step === '5') step = state.lead_id ? '4' : '1';
     }
     var all = d.querySelectorAll('[data-step]');
     for (var i = 0; i < all.length; i++) all[i].classList.toggle('on', all[i].dataset.step === step);
     if (push) history.pushState({ step: step }, '', step === '1' ? location.pathname + location.search : '#step-' + step);
     w.scrollTo(0, 0);
-    if (step === '2' || step === '3') marks();
+    if (step === '3') marks();
     var h = d.querySelector('[data-step="' + step + '"] h2');
     if (h) setTimeout(function () { h.focus({ preventScroll: true }); }, 60);
   }
@@ -158,15 +159,20 @@
   }
 
 
-  // ---------- step 1 ----------
-  var markBad = function () {};
-  var f1 = $('f1'), sel = $('f-loss'), fname = $('f-name'), fphone = $('f-phone'), fzip = $('f-zip'), faddr = $('f-address');
+  // ---------- step 1: direct owner qualification + instant lead save ----------
+  var busy = false, markBad = function () {};
+  var f1 = $('f1'), sel = $('f-loss'), fname = $('f-name'), fphone = $('f-phone'), fzip = $('f-zip'), faddr = $('f-address'), go1 = $('go1'), sum = $('sum'), sumT = $('sum-t');
+  var ownRadios = f1 ? Array.prototype.slice.call(f1.querySelectorAll('input[name="owner"]')) : [];
+  function getOwner() { for (var i = 0; i < ownRadios.length; i++) if (ownRadios[i].checked) return ownRadios[i].value; return ''; }
+  function syncOwnerPills() { ownRadios.forEach(function (r) { var lbl = r.closest('.own-pill'); if (lbl) lbl.classList.toggle('on', r.checked); }); }
   function fmtPhone(x) { return x.length > 6 ? '(' + x.slice(0, 3) + ') ' + x.slice(3, 6) + '-' + x.slice(6) : x.length > 3 ? '(' + x.slice(0, 3) + ') ' + x.slice(3) : x; }
   function pushPartial(extra) {
     var pDigits = fphone ? digitsOf(fphone.value) : '';
     if (pDigits.length !== 10 || /^[01]/.test(pDigits) || /^(\d)\1{9}$/.test(pDigits)) return;
+    var curOwn = getOwner() || state.owner || '';
     var p = {
       pid: state.pid, form: 'form',
+      owner: curOwn,
       name: fname ? fname.value.trim().replace(/\s+/g, ' ') : (state.name || ''),
       phone: fmtPhone(pDigits),
       zip: fzip ? String(fzip.value || '').replace(/\D/g, '').slice(0, 5) : (state.zip || ''),
@@ -183,6 +189,10 @@
     if (state.loss_type && LOSS[state.loss_type]) sel.value = state.loss_type;
     else if (LOSS[qs.get('loss')]) sel.value = qs.get('loss');
     else if (/az|hail|120248791830950534/i.test((qs.get('utm_campaign') || '') + ' ' + (qs.get('hsa_cam') || ''))) sel.value = 'hail';
+    if (state.owner && OWN[state.owner] && state.owner !== 'rent') {
+      ownRadios.forEach(function (r) { r.checked = (r.value === state.owner); });
+      syncOwnerPills();
+    }
     if (state.name && !fname.value) fname.value = state.name;
     if (state.phone && !fphone.value) fphone.value = state.phone;
     if (state.zip && fzip && !fzip.value) fzip.value = state.zip;
@@ -197,9 +207,15 @@
       if (x.length === 10) pTimer = setTimeout(function () { pushPartial(); }, 1200);
     });
     if (fzip) fzip.addEventListener('input', function () { fzip.value = String(fzip.value || '').replace(/\D/g, '').slice(0, 5); });
-    var fieldEl = function (k) { return k === 'loss_type' ? sel : k === 'zip' ? fzip : f1[k]; };
-    var bad = function (k, on) { var f = f1.querySelector('.fld[data-f="' + k + '"]'); var el = fieldEl(k); if (f) f.classList.toggle('bad', !!on); if (el) el.setAttribute('aria-invalid', on ? 'true' : 'false'); };
+    var fieldEl = function (k) { return k === 'loss_type' ? sel : k === 'owner' ? ownRadios[0] : k === 'zip' ? fzip : f1[k]; };
+    var bad = function (k, on) {
+      var f = f1.querySelector('.fld[data-f="' + k + '"]');
+      if (f) f.classList.toggle('bad', !!on);
+      if (k === 'owner') ownRadios.forEach(function (r) { r.setAttribute('aria-invalid', on ? 'true' : 'false'); });
+      else { var el = fieldEl(k); if (el) el.setAttribute('aria-invalid', on ? 'true' : 'false'); }
+    };
     var okOf = function (k) {
+      if (k === 'owner') return !!OWN[getOwner()];
       var el = fieldEl(k);
       var v = (el ? el.value : '').trim();
       if (k === 'loss_type') return !!LOSS[v];
@@ -208,7 +224,6 @@
       if (k === 'zip') return /^\d{5}$/.test(v);
       return v.length >= 2 && /[a-z0-9]/i.test(v);
     };
-    var sum = $('sum'), sumT = $('sum-t');
     var refreshSum = function () {
       var n = f1.querySelectorAll('.fld.bad').length;
       sum.hidden = !n; sumT.textContent = n === 1 ? 'Almost there. Please fix the highlighted item.' : 'Almost there. Please fix the ' + n + ' highlighted items.';
@@ -219,40 +234,48 @@
       el.addEventListener('blur', function () { if (el.value) { bad(k, !okOf(k)); if (!sum.hidden) refreshSum(); } if (k === 'phone') pushPartial(); });
     });
     sel.addEventListener('change', function () { started(); bad('loss_type', false); if (!sum.hidden) refreshSum(); });
+    ownRadios.forEach(function (r) {
+      r.addEventListener('change', function () {
+        started(); syncOwnerPills(); bad('owner', false); if (!sum.hidden) refreshSum();
+        var v = getOwner(); state.owner = v; save();
+        if (v === 'rent') {
+          clearTimeout(pTimer);
+          dl('quiz_answer', { step: 2, answer: 'rent' });
+          var pDigits = fphone ? digitsOf(fphone.value) : '';
+          if (pDigits.length === 10) fetch('/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ pid: state.pid, form: 'form', owner: 'rent', phone: fmtPhone(pDigits) }), keepalive: true }).catch(function () {});
+          setTimeout(function () { show('2b', true); }, 140);
+        }
+      });
+    });
     f1.addEventListener('submit', function (e) {
-      e.preventDefault(); started();
-      var keys = ['loss_type', 'name', 'phone', 'zip'], first = null;
+      e.preventDefault(); if (busy) return; started();
+      var keys = ['loss_type', 'owner', 'name', 'phone', 'zip'], first = null;
       keys.forEach(function (k) { var ok = okOf(k); bad(k, !ok); if (!ok && !first) first = k; });
       refreshSum();
       if (first) { var fel = fieldEl(first); if (fel) fel.focus(); return; }
-      state.loss_type = sel.value; state.name = fname.value.trim().replace(/\s+/g, ' '); state.phone = fphone.value; state.zip = fzip.value.trim();
+      state.loss_type = sel.value; state.owner = getOwner(); state.name = fname.value.trim().replace(/\s+/g, ' '); state.phone = fphone.value; state.zip = fzip.value.trim();
       if (!state.address || /^ZIP\s+\d{5}$/i.test(state.address)) state.address = 'ZIP ' + state.zip;
       state.step1 = true; save();
       dl('quiz_answer', { step: 1, answer: state.loss_type });
-      // Unfinished form only. The team is alerted if they stop here; it closes when the lead saves or they say they rent.
+      dl('quiz_answer', { step: 2, answer: state.owner });
       clearTimeout(pTimer);
-      pushPartial();
-      show('2', true);
+      if (state.owner === 'rent') {
+        fetch('/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ pid: state.pid, form: 'form', owner: 'rent', phone: state.phone }), keepalive: true }).catch(function () {});
+        return show('2b', true);
+      }
+      if (state.lead_id && state.lead_phone === digitsOf(state.phone)) return show('3', true);
+      saveLead(go1);
     });
     markBad = function (errs) { Object.keys(errs).forEach(function (k) { bad(k === 'address' ? 'zip' : k, true); }); refreshSum(); };
   }
   if (faddr) acInit(faddr, function () { if (faddr.value) { state.address = faddr.value.trim(); save(); } });
 
-  // ---------- step 2: ownership. Owner = save the lead. Renter = exit, no lead, no alert ----------
-  var busy = false, err2 = $('err2');
+  // ---------- step 2 of 3 (s3): claim_status + optional street address ----------
   d.addEventListener('click', function (e) {
     var o = e.target.closest('.opt'); if (!o || busy) return;
     var k = o.dataset.k, v = o.dataset.v;
     state[k] = v; save(); marks();
-    if (k === 'owner') {
-      dl('quiz_answer', { step: 2, answer: v });
-      if (v === 'rent') {
-        fetch('/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ pid: state.pid, form: 'form', owner: 'rent', phone: state.phone }), keepalive: true }).catch(function () {});
-        return setTimeout(function () { show('2b', true); }, 160);
-      }
-      if (state.lead_id && state.lead_phone === digitsOf(state.phone)) return setTimeout(function () { show('3', true); }, 160); // already saved, no second Lead
-      saveLead(o);
-    } else if (k === 'claim_status') {
+    if (k === 'claim_status') {
       dl('quiz_answer', { step: 3, answer: v });
       var streetAddr = faddr && faddr.value ? faddr.value.trim() : '';
       if (streetAddr) { state.address = streetAddr; save(); }
@@ -261,7 +284,7 @@
     }
   });
   function saveLead(btn) {
-    busy = true; err2.hidden = true; btn.setAttribute('aria-busy', 'true');
+    busy = true; if (sum) sum.hidden = true; if (btn) { btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
     var payload = {
       source: 'form', loss_type: state.loss_type, owner: state.owner, name: state.name, phone: state.phone,
       address: state.address || ('ZIP ' + (state.zip || '')), zip: state.zip,
@@ -302,16 +325,24 @@
           });
         }
         save(); show('3', true);
-      } else if (j.errors && (j.errors.loss_type || j.errors.name || j.errors.phone || j.errors.zip || j.errors.address)) {
-        show('1', true); markBad(j.errors);
+      } else if (j.errors && (j.errors.loss_type || j.errors.owner || j.errors.name || j.errors.phone || j.errors.zip || j.errors.address)) {
+        show('1', false); markBad(j.errors);
       } else { throw new Error(j.error || 'save'); }
     }).catch(function (e) {
-      err2.textContent = (e && e.message && e.message !== 'save' && e.message.indexOf('fetch') === -1 ? e.message : 'We couldn’t save that.') + (e && /call/.test(e.message || '') ? '' : ' ' + CALL);
-      err2.hidden = false;
-    }).finally(function () { busy = false; btn.removeAttribute('aria-busy'); });
+      pushPartial();
+      if (sum && sumT) {
+        sumT.textContent = (e && e.message && e.message !== 'save' && e.message.indexOf('fetch') === -1 ? e.message : 'We couldn’t save that.') + (e && /call/.test(e.message || '') ? '' : ' ' + CALL);
+        sum.hidden = false;
+      }
+    }).finally(function () { busy = false; if (btn) { btn.disabled = false; btn.removeAttribute('aria-busy'); } });
   }
   var ob = $('own-back');
-  if (ob) ob.addEventListener('click', function () { state.owner = ''; save(); show('2', true); });
+  if (ob) ob.addEventListener('click', function () {
+    state.owner = ''; save();
+    ownRadios.forEach(function (r) { r.checked = false; });
+    syncOwnerPills();
+    show('1', true);
+  });
 
   // ---------- step 4: optional uploads, browser straight to the bucket ----------
   var MAXF = 10, MAXT = 250 * 1024 * 1024, picked = [];

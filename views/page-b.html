@@ -81,6 +81,14 @@ h1 .hl{color:var(--royal)}
 .fld.bad .box{background:var(--errbg);border:2px solid var(--err);padding:0 13.5px}
 .fld.bad .box label{color:var(--err)}
 .fld.bad .msg{display:flex}
+.own-lbl{font-size:12px;font-weight:600;color:var(--muted);line-height:1.2;padding:0 2px}
+.own-row{display:grid;grid-template-columns:1fr 1.25fr .82fr;gap:6px}
+.own-pill{position:relative;display:flex;align-items:center;justify-content:center;min-height:46px;padding:6px 8px;background:#fff;border:1.5px solid var(--line);border-radius:12px;font-family:var(--fh);font-weight:600;font-size:13px;line-height:1.15;text-align:center;color:var(--ink);cursor:pointer;user-select:none}
+.own-pill input{position:absolute;opacity:0;pointer-events:none}
+.own-pill:has(input:checked),.own-pill.on{background:var(--tint);border:2px solid var(--royal);color:var(--royal);padding:5.5px 7.5px}
+.own-pill:has(input:focus-visible){outline:3px solid var(--blue);outline-offset:2px}
+.fld.bad .own-pill{background:var(--errbg);border-color:var(--err)}
+.fld.bad .own-lbl{color:var(--err)}
 .ac-list{position:absolute;z-index:20;left:0;right:0;top:58px;margin:0;padding:4px;list-style:none;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 28px rgba(8,29,94,.16);max-height:280px;overflow:auto}
 .ac-list li{padding:10px 12px;border-radius:8px;cursor:pointer;font-size:15px;line-height:1.3}
 .ac-list li small{display:block;font-size:12.5px;color:var(--muted)}
@@ -219,11 +227,20 @@ h2:focus,h2:focus-visible{outline:none}
  </div>
  <div class="formwrap">
   <form class="card" id="f1" method="post" action="/api/lead" novalidate>
-   <div class="hint"><span class="bars" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span>Free Homeowner Claim Check · Takes 30 seconds</div>
+   <div class="hint"><span class="bars" aria-hidden="true"><i class="on"></i><i></i><i></i></span>Step 1 of 3 · Free 30-second claim check</div>
    <div class="sum" id="sum" role="alert" hidden><svg class="ic"><use href="#i-alert"/></svg><span id="sum-t"></span></div>
    <div class="fld" data-f="loss_type">
     <div class="box"><label for="f-loss">What happened to your property?</label><select id="f-loss" name="loss_type" required aria-describedby="e-loss"><option value="">Select one</option><option value="fire">Fire</option><option value="smoke">Smoke damage</option><option value="hail">Hail or wind damage</option><option value="storm">Storm or tree damage</option><option value="water">Water or a leak</option><option value="denied">Claim denied</option><option value="other">Something else</option></select><svg class="ic"><use href="#i-chev"/></svg></div>
     <span class="msg" id="e-loss"><svg class="ic"><use href="#i-alert"/></svg>Please choose what happened.</span>
+   </div>
+   <div class="fld" data-f="owner">
+    <span class="own-lbl" id="l-owner">Do you own this property?</span>
+    <div class="own-row" role="radiogroup" aria-labelledby="l-owner" aria-describedby="e-owner">
+     <label class="own-pill"><input type="radio" name="owner" value="own_home" required><span>Homeowner</span></label>
+     <label class="own-pill"><input type="radio" name="owner" value="landlord"><span>Business / Landlord</span></label>
+     <label class="own-pill"><input type="radio" name="owner" value="rent"><span>No, I rent</span></label>
+    </div>
+    <span class="msg" id="e-owner"><svg class="ic"><use href="#i-alert"/></svg>Please select if you own or rent this property.</span>
    </div>
    <div class="fld" data-f="name">
     <div class="box"><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" autocapitalize="words" enterkeyhint="next" placeholder="First and last name" required aria-describedby="e-name"></div>
@@ -248,18 +265,6 @@ h2:focus,h2:focus-visible{outline:none}
  <p class="foot">Blue Star Adjusters · CA DOI License No. 6015234 · <a href="/privacy">Privacy</a></p>
 </section>
 
-<!-- Step 2: ownership -->
-<section class="screen" id="s2" data-step="2" aria-labelledby="h2o">
- <div class="bp"><button class="back" type="button" data-back><svg class="ic"><use href="#i-back"/></svg>Back</button><span class="prog"><span class="bars" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i></span>Step 2 of 4</span></div>
- <h2 id="h2o" tabindex="-1">Do you own this property?</h2>
- <p class="sub">We help property owners with building claims.</p>
- <button type="button" class="opt" data-k="owner" data-v="own_home">Yes, I own my home<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
- <button type="button" class="opt" data-k="owner" data-v="landlord">I own it as a landlord or business<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
- <button type="button" class="opt" data-k="owner" data-v="rent">No, I rent<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
- <p class="uperr" id="err2" role="alert" hidden></p>
- <p class="lock"><svg class="ic"><use href="#i-lock"/></svg>Your details go only to Blue Star Adjusters. We don’t sell your details.</p>
-</section>
-
 <!-- Step 2b: renter exit, no lead -->
 <section class="screen" id="s2b" data-step="2b" aria-labelledby="h2x">
  <div class="round"><svg class="ic"><use href="#i-home"/></svg></div>
@@ -269,9 +274,9 @@ h2:focus,h2:focus-visible{outline:none}
  <button class="btn2" type="button" id="own-back">I own it. Go back</button>
 </section>
 
-<!-- Step 3: claim status + optional street address -->
+<!-- Step 2 of 3 (s3): claim status + optional street address -->
 <section class="screen" id="s3" data-step="3" aria-labelledby="h3">
- <div class="bp"><button class="back" type="button" data-back><svg class="ic"><use href="#i-back"/></svg>Back</button><span class="prog"><span class="bars" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>Step 3 of 4</span></div>
+ <div class="bp"><button class="back" type="button" data-back><svg class="ic"><use href="#i-back"/></svg>Back</button><span class="prog"><span class="bars" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></span>Step 2 of 3</span></div>
  <h2 id="h3" tabindex="-1">Where is your claim right now?</h2>
  <div class="fld" data-f="address">
   <div class="box"><label for="f-address">Property street address (optional)</label><input id="f-address" name="address" type="text" autocomplete="street-address" autocapitalize="words" enterkeyhint="done" placeholder="Helps us pull storm &amp; parcel data" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="f-address-list"></div>
@@ -284,9 +289,9 @@ h2:focus,h2:focus-visible{outline:none}
  <button type="button" class="opt" data-k="claim_status" data-v="not_filed">Haven’t filed yet<svg class="ic go"><use href="#i-arrow"/></svg><svg class="ic ok"><use href="#i-check"/></svg></button>
 </section>
 
-<!-- Step 4: optional uploads -->
+<!-- Step 3 of 3 (s4): optional uploads -->
 <section class="screen" id="s4" data-step="4" aria-labelledby="h4">
- <div class="bp"><button class="back" type="button" data-back><svg class="ic"><use href="#i-back"/></svg>Back</button><span class="prog"><span class="bars" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>Step 4 of 4</span></div>
+ <div class="bp"><button class="back" type="button" data-back><svg class="ic"><use href="#i-back"/></svg>Back</button><span class="prog"><span class="bars" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span>Step 3 of 3</span></div>
  <h2 id="h4" tabindex="-1">Last step. Got photos or your declaration page?</h2>
  <label class="drop" for="f-files"><svg class="ic"><use href="#i-up"/></svg><b>Add photos, videos or documents</b><span>Damage photos, your insurer’s estimate or denial letter. Optional.</span></label>
  <input type="file" id="f-files" multiple accept="image/*,video/*,.heic,.heif,.pdf,.doc,.docx" hidden>

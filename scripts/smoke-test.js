@@ -7,12 +7,12 @@ const post = (p, b, h = {}) => fetch(BASE + p, { method: 'POST', headers: { 'Con
 const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', name: 'Test Lead', phone: '(916) 555-0199', zip: '95811', address: '1610 R St, Sacramento, CA 95811', elapsed_ms: 42000, utm_source: 'google', utm_campaign: 'fire-test', gclid: 'TEST123', page_variant: 'fire' };
 
 (async () => {
-  let r = await fetch(BASE + '/?lp=a');
+  let r = await fetch(BASE + '/?lp=quiz');
   let t = await r.text();
   ok(r.status === 200 && t.includes('Home or business damaged?'), 'home renders default headline');
   ok(t.includes('name="viewport"') && t.includes('viewport-fit=cover'), 'viewport meta present');
   ok(t.includes('noindex'), 'noindex by default');
-  t = await (await fetch(BASE + '/?lp=a&loss=denied')).text();
+  t = await (await fetch(BASE + '/?lp=quiz&loss=denied')).text();
   ok(t.includes('Your claim was denied.') && t.includes('data-variant="denied"'), 'headline variant by ?loss=');
   r = await fetch(BASE + '/health'); ok(r.ok, 'health ok ' + JSON.stringify(await r.json()));
   r = await fetch(BASE + '/privacy'); ok(r.ok && (await r.text()).includes('Privacy notice'), 'privacy page');
@@ -54,7 +54,7 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   r = await fetch(`${BASE}/thanks`); ok(r.ok && (await r.text()).includes('Got it'), 'thanks page renders');
   r = await fetch(`${BASE}/thank-you`); t = await r.text();
   ok(r.ok && t.includes('id="slot-save"') && t.includes('noindex,nofollow') && /no-store/.test(r.headers.get('cache-control')), 'thank-you page renders, noindex, not cached');
-  r = await fetch(`${BASE}/?lp=a`); const html = await r.text(); ok(/src="\/app\.js\?v=[0-9a-f]{10}"/.test(html) && /method="post"/.test(html), 'app.js is versioned and forms post');
+  r = await fetch(`${BASE}/?lp=quiz`); const html = await r.text(); ok(/src="\/app\.js\?v=[0-9a-f]{10}"/.test(html) && /method="post"/.test(html), 'app.js is versioned and forms post');
 
   const pp = (b, ip) => fetch(BASE + '/api/partial', { method: 'POST', headers: { 'Content-Type': 'text/plain', 'X-Real-IP': ip }, body: JSON.stringify(b) });
   r = await pp({ pid: 'smoke-partial-1', form: 'quiz', name: 'Partial Only', phone: '(916) 555-0181', address: '9 Elm St, Sacramento', loss_type: 'fire' }, '10.0.1.1');
@@ -62,14 +62,14 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   r = await pp({ pid: 'smoke-partial-2', phone: '123' }, '10.0.1.1'); ok(r.status === 400, 'unfinished form with bad phone rejected');
   r = await pp({ pid: 'smoke-partial-3', name: 'Then Sent', phone: '(916) 555-0182' }, '10.0.1.1'); ok(r.ok, 'second unfinished form saved');
   r = await post('/api/lead', { ...good, name: 'Then Sent', phone: '(916) 555-0182' }, { 'X-Real-IP': '10.0.1.2' }); ok(r.ok, 'full lead from the same phone');
-  r = await fetch(BASE + '/?lp=a'); t = await r.text(); ok(!/Verify<\/a>/.test(t) && !/construction set/.test(t) && !/builder/i.test(t) && t.includes('logo-pcapia.webp') && !t.includes('logo-capia.webp') && t.includes('logo-napia.webp') && !t.includes('c-email'), 'page copy: no Verify, no builder quote, NAPIA and PCAPIA only, no email field');
+  r = await fetch(BASE + '/?lp=quiz'); t = await r.text(); ok(!/Verify<\/a>/.test(t) && !/construction set/.test(t) && !/builder/i.test(t) && t.includes('logo-pcapia.webp') && !t.includes('logo-capia.webp') && t.includes('logo-napia.webp') && !t.includes('c-email'), 'page copy: no Verify, no builder quote, NAPIA and PCAPIA only, no email field');
   r = await post('/api/lead', { ...good, owner: 'rent', name: 'Renter Test', phone: '(916) 555-0161' }, { 'X-Real-IP': '10.0.3.1' });
   j = await r.json(); ok(r.status === 400 && j.errors && j.errors.owner, 'renter refused, no lead saved');
   r = await post('/api/lead', { ...good, owner: undefined, name: 'No Owner', phone: '(916) 555-0162' }, { 'X-Real-IP': '10.0.3.2' });
   j = await r.json(); ok(r.status === 400 && j.errors && j.errors.owner, 'ownership answer required');
   r = await post('/api/lead', { ...good, owner: 'landlord', name: 'Landlord Test', phone: '(916) 555-0163' }, { 'X-Real-IP': '10.0.3.3' });
   j = await r.json(); ok(r.ok && j.ok, 'landlord lead accepted');
-  r = await fetch(BASE + '/?lp=a'); t = await r.text(); ok(t.includes('data-k="owner" data-v="rent"') && t.includes('id="renter-exit"') && !t.includes('data-k="loss_timing"') && t.includes('name="owner"'), 'ownership question on quiz and contact form, timing question gone');
+  r = await fetch(BASE + '/?lp=quiz'); t = await r.text(); ok(t.includes('data-k="owner" data-v="rent"') && t.includes('id="renter-exit"') && !t.includes('data-k="loss_timing"') && t.includes('name="owner"'), 'ownership question on quiz and contact form, timing question gone');
   if (KEY) {
     await new Promise(res => setTimeout(res, 2500));
     const pc = await (await fetch(`${BASE}/admin/partials.csv?key=${encodeURIComponent(KEY)}`)).text();
@@ -80,7 +80,7 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
 
   r = await post('/api/lead', { ...good, loss_type: 'storm', name: 'Storm Lead', phone: '(916) 555-0193' }, { 'X-Real-IP': '10.0.2.1' });
   ok(r.ok, 'storm loss type accepted');
-  t = await (await fetch(BASE + '/?lp=a&loss=storm')).text(); ok(t.includes('storm damage claim'), 'storm headline variant');
+  t = await (await fetch(BASE + '/?lp=quiz&loss=storm')).text(); ok(t.includes('storm damage claim'), 'storm headline variant');
   r = await post('/api/lead', { source: 'form', loss_type: 'storm', owner: 'own_home', name: 'AZ Hail Lead', phone: '(602) 555-0194', address: '1234 E Main St, Mesa, AZ 85203', zip: '', page_variant: 'b', utm_source: 'facebook', utm_campaign: 'bsa_az_hail', landing_url: 'https://quiz.bluestaradjusters.com/?utm_campaign=bsa_az_hail&fbclid=AZFBCLID999' }, { 'X-Real-IP': '10.0.2.2' });
   j = await r.json(); ok(r.ok && j.ok, 'any US address saved and 5-digit ZIP extracted');
   const { leadEvent } = require('../src/capi');
@@ -89,29 +89,31 @@ const good = { loss_type: 'fire', owner: 'own_home', claim_status: 'low_offer', 
   const { contactProps } = require('../src/hubspot');
   const azHs = contactProps({ public_id: 'az-1', phone: '(602) 555-0194', name: 'AZ Hail', zip: '85203', address: '1234 E Main St, Mesa, AZ 85203', loss_type: 'hail', owner: 'own_home', source: 'quiz', page_variant: 'hail' });
   ok(azHs.state === 'AZ' && azHs.bs_loss_type === 'storm', 'HubSpot maps AZ ZIP to state=AZ and hail to bs_loss_type=storm');
-  t = await (await fetch(BASE + '/?lp=a&utm_campaign=bsa_az_hail&state=az')).text();
+  t = await (await fetch(BASE + '/?lp=quiz&utm_campaign=bsa_az_hail&state=az')).text();
   ok(t.includes('3004469742') && !t.includes('6015234') && t.includes('Hail or storm damage claim?') && t.includes('Hail, storm or tree'), 'AZ Page A swaps license to 3004469742 and shows hail headline + tile');
   t = await (await fetch(BASE + '/?lp=b&hsa_cam=120248791830950534')).text();
-  ok(t.includes('3004469742') && !t.includes('6015234') && t.includes('Hail, storm or tree'), 'AZ Page B swaps license to 3004469742 via HubSpot campaign ID');
-  t = await (await fetch(BASE + '/?lp=a')).text();
+  ok(t.includes('3004469742') && !t.includes('6015234') && t.includes('Hail or wind damage'), 'AZ Page B swaps license to 3004469742 via HubSpot campaign ID');
+  t = await (await fetch(BASE + '/?lp=quiz')).text();
   const vis = t.replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>|<svg[\s\S]*?<\/svg>/g, '');
   ok(!/916|507-1005|Start my free review|builder|developer|Email \(optional\)|—|–/.test(vis) && (t.match(/tel:\+18889712524/g) || []).length >= 8 && !t.includes('tel:+1916'), 'copy v2: toll free only, no old CTA, no dashes');
 
-  // ---------- Page B (V5 multi-step) ----------
+  // ---------- Page B (1-screen qualified homeowner claim check) ----------
   const ck = c => ({ Cookie: c });
-  t = await (await fetch(BASE + '/', { headers: ck('bs_lp=b') })).text(); ok(t.includes('Step 1 of 4') && t.includes('data-variant="b"') && /src="\/b\.js\?v=[0-9a-f]{10}"/.test(t), 'cookie b serves Page B');
-  t = await (await fetch(BASE + '/', { headers: ck('bs_lp=a') })).text(); ok(t.includes('id="quiz"') && !t.includes('Step 1 of 4'), 'cookie a serves Page A');
-  r = await fetch(BASE + '/?lp=b', { headers: ck('bs_lp=a') }); ok((await r.text()).includes('Step 1 of 4') && /bs_lp=b/.test(r.headers.get('set-cookie') || ''), '?lp=b overrides cookie and resets it');
-  const seen = { a: 0, b: 0 };
-  for (let i = 0; i < 60; i++) { const x = await fetch(BASE + '/'); const v = (/bs_lp=([ab])/.exec(x.headers.get('set-cookie') || '') || [])[1]; const h = await x.text(); if (v && ((v === 'b') === h.includes('Step 1 of 4'))) seen[v]++; }
-  ok(seen.a > 10 && seen.b > 10 && seen.a + seen.b === 60, `50/50 split, cookie matches page (a ${seen.a}, b ${seen.b})`);
+  t = await (await fetch(BASE + '/')).text();
+  ok(t.includes('Step 1 of 3') && t.includes('name="owner"') && !t.includes('id="s2"') && t.includes('data-variant="b"') && /src="\/b\.js\?v=[0-9a-f]{10}"/.test(t), 'default / serves Page B with Screen 1 ownership pills');
+  t = await (await fetch(BASE + '/?lp=quiz', { headers: ck('bs_lp=b') })).text();
+  ok(t.includes('id="quiz"') && !t.includes('Step 1 of 3'), '?lp=quiz serves Page A');
+  r = await fetch(BASE + '/?lp=b', { headers: ck('bs_lp=a') });
+  ok((await r.text()).includes('Step 1 of 3') && /bs_lp=b/.test(r.headers.get('set-cookie') || ''), '?lp=b overrides cookie and resets it');
+  t = await (await fetch(BASE + '/?lp=b&state=az&h=pa-hail')).text();
+  ok(t.includes('3004469742') && t.includes('Hail or roof claim denied or underpaid?'), 'Google Search AZ ?h=pa-hail variant renders');
   t = await (await fetch(BASE + '/thank-you', { headers: ck('bs_lp=b') })).text(); ok(t.includes('id="confirm"') && t.includes('data-ty="ty"') && t.includes('noindex,nofollow'), 'thank-you on cookie b is Page B calendar');
-  const goodB = { source: 'form', loss_type: 'water', owner: 'own_home', name: 'Page Bee', phone: '(916) 555-0141', address: '1610 R St, Sacramento, CA 95811', elapsed_ms: 25000, page_variant: 'b', utm_source: 'facebook', fbclid: 'FBTEST', fbp: 'fb.1.1700000000000.123', landing_url: 'https://quiz.bluestaradjusters.com/?utm_source=facebook' };
+  const goodB = { source: 'form', loss_type: 'water', owner: 'own_home', name: 'Test Page Bee', phone: '(916) 555-0141', zip: '95811', address: 'ZIP 95811', elapsed_ms: 25000, page_variant: 'b', utm_source: 'facebook', fbclid: 'FBTEST', fbp: 'fb.1.1700000000000.123', landing_url: 'https://quiz.bluestaradjusters.com/?utm_source=facebook' };
   r = await post('/api/lead', { ...goodB, owner: 'rent', phone: '(916) 555-0142' }, { 'X-Real-IP': '10.0.5.1' }); j = await r.json(); ok(r.status === 400 && j.errors.owner, 'Page B renter refused, no lead');
   r = await post('/api/lead', { ...goodB, loss_type: '' }, { 'X-Real-IP': '10.0.5.1' }); j = await r.json(); ok(r.status === 400 && j.errors.loss_type === 'Please choose what happened.', 'Page B missing loss type message');
-  r = await post('/api/lead', goodB, { 'X-Real-IP': '10.0.5.2' }); j = await r.json(); ok(r.ok && j.ok && /^[0-9a-f-]{36}$/.test(j.id), 'Page B lead saves at ownership step without claim status');
+  r = await post('/api/lead', goodB, { 'X-Real-IP': '10.0.5.2' }); j = await r.json(); ok(r.ok && j.ok && /^[0-9a-f-]{36}$/.test(j.id), 'Page B lead saves directly on Screen 1 with 5-digit ZIP + owner');
   const bid = j.id;
-  r = await post(`/api/lead/${bid}/status`, { claim_status: 'low_offer' }, { 'X-Real-IP': '10.0.5.2' }); ok(r.ok, 'step 3 claim status saved on the lead');
+  r = await post(`/api/lead/${bid}/status`, { claim_status: 'low_offer', address: '1610 R St, Sacramento, CA 95811' }, { 'X-Real-IP': '10.0.5.2' }); ok(r.ok, 'step 2 of 3 claim status + optional street address saved on the lead');
   r = await post(`/api/lead/${bid}/status`, { claim_status: 'nope' }, { 'X-Real-IP': '10.0.5.2' }); ok(r.status === 400, 'bad claim status rejected');
   r = await post('/api/lead/00000000-0000-0000-0000-000000000000/status', { claim_status: 'denied' }, { 'X-Real-IP': '10.0.5.2' }); ok(r.status === 404, 'claim status for unknown lead 404');
   r = await pp({ pid: 'smoke-b-renter', form: 'form', name: 'B Renter', phone: '(916) 555-0143', loss_type: 'fire' }, '10.0.5.3'); ok(r.ok, 'Page B step 1 saved as unfinished form');
