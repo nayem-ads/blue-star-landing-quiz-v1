@@ -160,7 +160,7 @@ function detectState(req, res) {
   else if (tok('wa|spokane|nine[-_ ]?mile|seattle').test(hay)) st = 'wa';
   else if (tok('nv|reno|washoe|hawk|vegas').test(hay)) st = 'nv';
   else if (tok('co|colorado|denver|aurora').test(hay)) st = 'co';
-  else if (tok('az|arizona|phoenix|mesa|glendale|120248791830950534|120248791831660534').test(hay)) st = 'az';
+  else if (tok('az|arizona|phoenix|mesa|glendale|120248791830950534|120248791831660534|120248908954450534|120248908988960534|bsa_az_hail_lp40').test(hay)) st = 'az';
   const prev = stCookie(req);
   if (st && res && prev !== st) res.append('Set-Cookie', `bs_st=${st}; Max-Age=7776000; Path=/; SameSite=Lax${req.secure ? '; Secure' : ''}`);
   return st || prev || 'ca';
@@ -193,6 +193,8 @@ function stateSwap(html, st, req) {
     s = { ...base, pill: 'Denver & Aurora Homeowners · CO Lic. 969283', eyebrow: 'Hail or storm damage in Denver or Aurora?' };
   }
   let out = html
+    .replaceAll('Licensed California Public Adjuster | Free Property Claim Review | Blue Star Adjusters', st === 'or' ? 'Licensed Oregon Public Adjuster | Policyholder Claim Representation | Blue Star Adjusters' : `Licensed ${s.name} Public Adjuster | Free Property Claim Review | Blue Star Adjusters`)
+    .replaceAll('Home or business damaged? Get a free property insurance claim review from a senior licensed California public adjuster. No upfront cost.', st === 'or' ? 'Independent Oregon public adjusters representing property policyholders. Request a free policy and claim review.' : `Home or business damaged? Get a free property insurance claim review from a senior licensed ${s.name} public adjuster. No upfront cost.`)
     .replaceAll('A licensed California public adjuster reviews your claim for free. Answer 4 quick questions. CA DOI License 6015234.', `A licensed ${s.name} public adjuster reviews your claim for free. Answer 4 quick questions. ${s.licLabel} ${s.lic}.`)
     .replaceAll('CA Lic. 6015234', `${s.code} Lic. ${s.lic}`)
     .replaceAll('Licensed California public adjuster · CA DOI License No. 6015234', `Licensed ${s.name} public adjuster · ${s.licLabel} No. ${s.lic}`)

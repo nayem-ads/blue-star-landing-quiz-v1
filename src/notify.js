@@ -65,16 +65,22 @@ const CAMPAIGN_MAP = {
   '120248791830950534': { market: 'AZ · Phoenix & East Valley', label: 'AZ Phoenix — Hail & Storm Claims', state: 'AZ' },
   bsa_lp_zips: { market: 'CA · High-Loss ZIPs', label: 'CA — Property Loss ZIPs Funnel', state: 'CA' },
   bsa_if_la: { market: 'CA · Los Angeles', label: 'CA Los Angeles — Fire & Smoke Claims', state: 'CA' },
-  // Option A Live Meta Instant Form CBO + Ad Sets
+  // Live Meta AZ Hail Direct Claim Check LP ($40/d) + Legacy Instant Form CBO
+  bsa_az_hail_lp40: { market: 'AZ · Phoenix, Mesa & Glendale', label: 'Meta AZ Hail CBO ($40/d) — Direct Claim Check LP', state: 'AZ' },
+  '120248908954450534': { market: 'AZ · Phoenix, Mesa & Glendale', label: 'Meta AZ Hail CBO ($40/d) — Direct Claim Check LP', state: 'AZ' },
+  '120248908988960534': { market: 'AZ · Phoenix, Mesa & Glendale', label: 'AZ Hail 16 ZIPs — Direct Claim Check LP', state: 'AZ' },
   bsa_if_az_ca: { market: 'AZ & CA · Hail / Fire & Smoke', label: 'Meta Instant Form CBO — AZ Hail & CA Fire/Smoke', state: '' },
   '120248897062050534': { market: 'AZ & CA · Hail / Fire & Smoke', label: 'Meta Instant Form CBO — AZ Hail & CA Fire/Smoke', state: '' },
   'bsa | az hail + ca fire & smoke | instant form leads | cbo $75': { market: 'AZ & CA · Hail / Fire & Smoke', label: 'Meta Instant Form CBO — AZ Hail & CA Fire/Smoke', state: '' },
   '120248897076100534': { market: 'AZ · Phoenix & East Valley', label: 'AZ Hail ZIPs — Meta Instant Form', state: 'AZ' },
   '120248897076510534': { market: 'CA · Altadena, Pasadena & Palisades', label: 'CA Fire & Smoke ZIPs — Meta Instant Form', state: 'CA' },
-  // Option A Live Google Search Campaigns
+  // Live Google Search Campaigns ($200/d Manual CPC)
   '24425040654': { market: 'AZ · Arizona Search', label: 'Google Search — Arizona Hail, Roof & PA', state: 'AZ' },
   '24435970771': { market: 'CA · California Search', label: 'Google Search — California Fire, Smoke & Property', state: 'CA' },
   '24425040627': { market: 'CO · Colorado Search', label: 'Google Search — Colorado Hail & Commercial PA', state: 'CO' },
+  '24425040624': { market: 'WA · Washington Search', label: 'Google Search — Washington Fire, Smoke & PA', state: 'WA' },
+  '24430219835': { market: 'NV · Nevada Search', label: 'Google Search — Nevada Fire, Smoke & PA', state: 'NV' },
+  '24425041329': { market: 'OR · Oregon Search', label: 'Google Search — Oregon Public Adjuster', state: 'OR' },
 };
 
 const CREATIVE_MAP = {
@@ -111,6 +117,9 @@ const CREATIVE_MAP = {
   la_02_smoke: 'Standing Home Wildfire Smoke & HVAC Duct Testing',
   la_03_proof: '$17K Carrier Smoke Offer -> ~$1.1M Case Proof',
   la_04_table: 'Carrier Adjuster vs. Public Adjuster Comparison',
+  azh_lp01_ceiling_stain: 'AZ Hail LP — Ceiling Stain / Roof Trace',
+  azh_lp02_cracked_tiles: 'AZ Hail LP — Cracked Tiles vs. Patch Offer',
+  azh_lp03_denied_wear_tear: 'AZ Hail LP — Denied as Wear & Tear Proof',
   azh_if_01_ceiling_stain: 'AZ Hail — Ceiling Stain / Hidden Roof Leak',
   azh_if_02_cracked_tiles: 'AZ Hail — Cracked Concrete Roof Tiles',
   azh_if_03_before_accept: 'AZ Hail — Check Estimate Before Accepting Offer',
